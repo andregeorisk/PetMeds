@@ -1,0 +1,1982 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PetMeds - Controle de Medicação Pet</title>
+  <style>
+    :root {
+      --bg-main: #f7f5f0;
+      --bg-card: #ffffff;
+      --bg-nav: #ffffff;
+      --text-main: #2d3142;
+      --text-muted: #6c757d;
+      --primary: #4a6fa5;
+      --primary-hover: #3b5984;
+      --primary-light: #eef3f9;
+      --accent-badge: #e67e22;
+      --danger-badge: #e74c3c;
+      --success-badge: #2ecc71;
+      --border-color: #e2e8f0;
+      --shadow: 0 4px 12px rgba(0,0,0,0.05);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    [data-theme="dark"] {
+      --bg-main: #18191a;
+      --bg-card: #242526;
+      --bg-nav: #242526;
+      --text-main: #e4e6eb;
+      --text-muted: #b0b3b8;
+      --primary: #6495ed;
+      --primary-hover: #4169e1;
+      --primary-light: #2a3447;
+      --border-color: #3a3b3c;
+      --shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      background-color: var(--bg-main);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      padding-bottom: 70px;
+    }
+
+    /* AUTH SCREEN STYLES */
+    .auth-container {
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .auth-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+    }
+
+    .auth-tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+    }
+
+    .auth-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* HEADER & USER BAR */
+    header {
+      padding: 16px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .user-info-bar {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .user-info-bar strong {
+      color: var(--text-main);
+    }
+
+    .role-badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-left: 4px;
+    }
+
+    main { padding: 16px; flex: 1; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    h1, h2, h3, h4 { font-weight: 600; margin-bottom: 12px; }
+    h1 { font-size: 1.4rem; }
+    h2 { font-size: 1.2rem; }
+    h3 { font-size: 1rem; }
+    h4 { font-size: 0.9rem; }
+
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      font-size: 0.95rem;
+      transition: opacity 0.2s;
+    }
+
+    .btn:active { opacity: 0.8; }
+    .btn-secondary { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
+    .btn-danger { background: var(--danger-badge); color: white; }
+    .btn-sm { padding: 6px 12px; font-size: 0.85rem; width: auto; }
+    .btn-group { display: flex; gap: 8px; margin-top: 8px; }
+
+    .form-group { margin-bottom: 14px; text-align: left; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }
+    .form-control {
+      width: 100%;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-size: 0.95rem;
+    }
+
+    /* DASHBOARD */
+    .pet-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
+    .pet-tab {
+      padding: 6px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .pet-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .kpi-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+    .kpi-card { background: var(--bg-card); padding: 12px 8px; border-radius: var(--radius-sm); text-align: center; border: 1px solid var(--border-color); }
+    .kpi-value { font-size: 1.2rem; font-weight: bold; color: var(--primary); }
+    .kpi-label { font-size: 0.7rem; color: var(--text-muted); }
+
+    .week-carousel { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+    .day-col { background: var(--bg-card); border-radius: var(--radius-sm); padding: 6px 2px; border: 1px solid var(--border-color); font-size: 0.75rem; }
+    .day-col.today { border-color: var(--primary); font-weight: bold; }
+    .dose-dot { display: block; font-size: 1rem; margin-top: 4px; }
+
+    /* LISTS & BADGES */
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .list-item:last-child { border-bottom: none; }
+
+    .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; color: white; }
+    .badge-warning { background: var(--accent-badge); }
+    .badge-danger { background: var(--danger-badge); }
+    .badge-success { background: var(--success-badge); }
+
+    /* BOTTOM NAV */
+    nav.bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      height: 65px;
+      background: var(--bg-nav);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .nav-btn.active { color: var(--primary); font-weight: bold; }
+
+    .nav-btn.dash-btn {
+      background: var(--primary);
+      color: white;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-top: -20px;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .nav-btn.dash-btn.active { background: var(--primary-hover); color: white; }
+
+    /* BANNER & MODAL */
+    .banner {
+      background: var(--primary-light);
+      border: 1px solid var(--primary);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .modal-content {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 20px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: var(--shadow);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .checkbox-group input { width: auto; }
+
+    .text-link {
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 0.85rem;
+      text-decoration: underline;
+      display: inline-block;
+      margin-top: 8px;
+    }
+
+    .code-box {
+      background: var(--primary-light);
+      border: 2px dashed var(--primary);
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      font-size: 1.2rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-align: center;
+      color: var(--primary);
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- AUTH SCREEN -->
+  <div id="auth-screen" class="auth-container">
+    <div class="auth-card">
+      <h1 style="text-align: center; margin-bottom: 16px; color: var(--primary);">🐾 PetMeds</h1>
+      
+      <!-- Normal Auth View -->
+      <div id="auth-main-view">
+        <div class="auth-tabs">
+          <div class="auth-tab active" onclick="switchAuthMode('login')">Entrar</div>
+          <div class="auth-tab" onclick="switchAuthMode('register')">Cadastrar</div>
+        </div>
+
+        <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+          <div class="form-group" id="group-name" style="display: none;">
+            <label>Nome Completo</label>
+            <input type="text" id="auth-name" class="form-control" placeholder="Seu nome">
+          </div>
+          <div class="form-group">
+            <label>E-mail</label>
+            <input type="email" id="auth-email" class="form-control" required placeholder="seu@email.com">
+          </div>
+          <div class="form-group">
+            <label>Senha</label>
+            <input type="password" id="auth-password" class="form-control" required placeholder="******">
+          </div>
+          <div class="form-group" id="group-confirm-password" style="display: none;">
+            <label>Confirmar Senha</label>
+            <input type="password" id="auth-confirm-password" class="form-control" placeholder="******">
+          </div>
+          <button type="submit" class="btn" id="auth-btn-submit">Entrar</button>
+        </form>
+
+        <div style="text-align: center; margin-top: 12px;">
+          <span class="text-link" onclick="openForgotPasswordView()">Esqueci minha senha</span>
+        </div>
+      </div>
+
+      <!-- Forgot Password View -->
+      <div id="auth-forgot-view" style="display: none;">
+        <h2 style="font-size: 1.1rem; text-align: center;">Recuperar Senha</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; text-align: center;">
+          Digite seu e-mail para receber um Código Provisório de acesso.
+        </p>
+        <form onsubmit="handleSendRecoveryCode(event)">
+          <div class="form-group">
+            <label>E-mail Cadastrado</label>
+            <input type="email" id="recovery-email" class="form-control" required placeholder="seu@email.com">
+          </div>
+          <button type="submit" class="btn">Enviar Código de Acesso</button>
+          <button type="button" class="btn btn-secondary" style="margin-top: 8px;" onclick="closeForgotPasswordView()">Voltar ao Login</button>
+        </form>
+      </div>
+
+      <!-- Reset Password View -->
+      <div id="auth-reset-view" style="display: none;">
+        <h2 style="font-size: 1.1rem; text-align: center;">Redefinir Senha</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; text-align: center;">
+          Informe o código provisório recebido e sua nova senha.
+        </p>
+        <form onsubmit="handleResetPasswordSubmit(event)">
+          <div class="form-group">
+            <label>Código Provisório (PIN de 6 dígitos)</label>
+            <input type="text" id="reset-code" class="form-control" required maxlength="6" placeholder="123456">
+          </div>
+          <div class="form-group">
+            <label>Nova Senha</label>
+            <input type="password" id="reset-new-pass" class="form-control" required placeholder="******">
+          </div>
+          <div class="form-group">
+            <label>Confirmar Nova Senha</label>
+            <input type="password" id="reset-confirm-pass" class="form-control" required placeholder="******">
+          </div>
+          <button type="submit" class="btn">Redefinir e Entrar</button>
+          <button type="button" class="btn btn-secondary" style="margin-top: 8px;" onclick="closeForgotPasswordView()">Cancelar</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- APP MAIN INTERFACE -->
+  <div id="app-interface" style="display: none;">
+    <header>
+      <div>
+        <h1 style="margin:0; font-size: 1.1rem;">🐾 PetMeds</h1>
+        <div class="user-info-bar">
+          <span id="header-user-name">Usuário</span> 
+          <span id="header-role-badge" class="role-badge">Admin</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="logout()">Sair</button>
+    </header>
+
+    <main>
+      <!-- 1. DASHBOARD -->
+      <section id="page-dashboard" class="page active">
+        <div class="pet-tabs" id="dash-pet-tabs"></div>
+        <div class="kpi-container">
+          <div class="kpi-card">
+            <div class="kpi-value" id="kpi-weight">-- kg</div>
+            <div class="kpi-label">Peso Atual</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value" id="kpi-doses">0</div>
+            <div class="kpi-label">Doses/Semana</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value" id="kpi-meds">0</div>
+            <div class="kpi-label">Remédios Ativos</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="week-carousel">
+            <button class="btn btn-secondary btn-sm" onclick="changeWeek(-1)">‹</button>
+            <span id="week-label" style="font-weight: 600; font-size: 0.9rem;">Semana Atual</span>
+            <button class="btn btn-secondary btn-sm" onclick="changeWeek(1)">›</button>
+          </div>
+          <div class="week-grid" id="week-grid"></div>
+        </div>
+      </section>
+
+      <!-- 2. PETS -->
+      <section id="page-pets" class="page">
+        <h2>Meus Pets</h2>
+        <div class="card">
+          <h3 id="pet-form-title">Cadastrar Novo Pet</h3>
+          <form id="form-pet" onsubmit="savePet(event)">
+            <input type="hidden" id="pet-id">
+            <div class="form-group">
+              <label>Nome</label>
+              <input type="text" id="pet-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Espécie</label>
+              <select id="pet-species" class="form-control">
+                <option value="Gato">Gato</option>
+                <option value="Cão">Cão</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Data de Nascimento</label>
+              <input type="date" id="pet-birth" class="form-control" required>
+            </div>
+            <div class="btn-group">
+              <button type="submit" class="btn">Salvar Pet</button>
+              <button type="button" class="btn btn-secondary" onclick="resetPetForm()">Cancelar</button>
+            </div>
+          </form>
+        </div>
+        <div id="pets-list"></div>
+      </section>
+
+      <!-- 3. REMÉDIOS -->
+      <section id="page-remedios" class="page">
+        <h2>Medicamentos</h2>
+        <div class="card">
+          <h3 id="med-form-title">Cadastrar Remédio</h3>
+          <form id="form-med" onsubmit="saveMedication(event)">
+            <input type="hidden" id="med-id">
+            <div class="form-group">
+              <label>Nome do Medicamento</label>
+              <input type="text" id="med-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Laboratório</label>
+              <input type="text" id="med-lab" class="form-control" required>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <div class="form-group" style="flex: 1;">
+                <label>Quantidade</label>
+                <input type="number" step="0.1" id="med-qty" class="form-control" required>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label>Unidade</label>
+                <select id="med-unit" class="form-control">
+                  <option value="unidade">unidade</option>
+                  <option value="ml">ml</option>
+                  <option value="mg">mg</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Data da Compra</label>
+              <input type="date" id="med-buy-date" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Data de Validade</label>
+              <input type="date" id="med-exp-date" class="form-control" required>
+            </div>
+            <div class="btn-group">
+              <button type="submit" class="btn">Salvar Medicamento</button>
+              <button type="button" class="btn btn-secondary" onclick="resetMedForm()">Cancelar</button>
+            </div>
+          </form>
+        </div>
+        <div id="meds-list"></div>
+      </section>
+
+      <!-- 4. ADMINISTRAÇÃO -->
+      <section id="page-admin" class="page">
+        <h2>Administração de Tratamentos</h2>
+        <div class="card">
+          <h3>Novo Tratamento</h3>
+          <form id="form-treatment" onsubmit="saveTreatment(event)">
+            <div class="form-group">
+              <label>Selecione o Pet</label>
+              <select id="treat-pet" class="form-control" required></select>
+            </div>
+            <div class="form-group">
+              <label>Selecione o Medicamento</label>
+              <select id="treat-med" class="form-control" required></select>
+            </div>
+            <div class="form-group">
+              <label>Posologia (Dose por administração)</label>
+              <input type="text" id="treat-dosage" class="form-control" placeholder="Ex: 1 comprimido ou 2.5 ml" required>
+            </div>
+            <div class="form-group">
+              <label>Horários do Dia</label>
+              <div id="times-container">
+                <input type="time" class="form-control treat-time" style="margin-bottom: 4px;" required>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 4px;" onclick="addTimeField()">+ Adicionar Horário</button>
+            </div>
+            <div class="form-group">
+              <label>Intervalo entre Dias</label>
+              <select id="treat-interval" class="form-control">
+                <option value="1">A cada 1 dia (Diário)</option>
+                <option value="2">A cada 2 dias</option>
+                <option value="3">A cada 3 dias</option>
+                <option value="7">A cada 1 semana</option>
+                <option value="14">A cada 2 semanas</option>
+                <option value="30">A cada 1 mês</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Duração</label>
+              <select id="treat-duration-type" class="form-control" onchange="toggleEndDate(this.value)">
+                <option value="indefinite">Indefinido</option>
+                <option value="until_date">Até data definida</option>
+              </select>
+            </div>
+            <div class="form-group" id="group-end-date" style="display: none;">
+              <label>Data Final do Tratamento</label>
+              <input type="date" id="treat-end-date" class="form-control">
+            </div>
+            <button type="submit" class="btn">Criar Tratamento</button>
+          </form>
+        </div>
+
+        <h3>Doses de Hoje</h3>
+        <div id="delay-suggestion-banner" class="banner" style="display: none;"></div>
+        <div id="today-doses-list"></div>
+      </section>
+
+      <!-- 5. CONFIGURAÇÕES & FAMÍLIA -->
+      <section id="page-config" class="page">
+        <h2>Configurações</h2>
+        
+        <!-- PERFIL DO USUÁRIO -->
+        <div class="card">
+          <h3>Meu Perfil</h3>
+          <form onsubmit="handleUpdateProfile(event)">
+            <div class="form-group">
+              <label>Nome</label>
+              <input type="text" id="profile-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>E-mail</label>
+              <input type="email" id="profile-email" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Alterar Senha (deixe em branco para manter)</label>
+              <input type="password" id="profile-pass" class="form-control" placeholder="Nova senha">
+            </div>
+            <button type="submit" class="btn">Atualizar Perfil</button>
+          </form>
+          <button class="btn btn-danger btn-sm" style="margin-top: 12px;" onclick="handleDeleteAccount()">Excluir Minha Conta</button>
+        </div>
+
+        <!-- NOTIFICAÇÕES & LEMBRETES EMAIL -->
+        <div class="card">
+          <h3>Notificações & Lembretes</h3>
+          <div class="checkbox-group">
+            <input type="checkbox" id="email-notif-user" onchange="toggleUserEmailNotif(this.checked)">
+            <label for="email-notif-user" style="margin: 0; font-size: 0.9rem;">Receber lembretes de doses por E-mail</label>
+          </div>
+          <button class="btn btn-secondary btn-sm" style="margin-top: 8px;" onclick="testNotification()">Testar Notificação Push</button>
+        </div>
+
+        <!-- AMBIENTE FAMÍLIA -->
+        <div class="card">
+          <h3>Sua Família / Grupo</h3>
+          <div id="family-info-container"></div>
+        </div>
+
+        <!-- ENTRAR EM OUTRA FAMÍLIA POR CÓDIGO -->
+        <div class="card">
+          <h3>Entrar em uma Família com Código</h3>
+          <form onsubmit="handleJoinByCode(event)">
+            <div class="form-group">
+              <label>Código da Família (6 dígitos)</label>
+              <input type="text" id="join-family-code" class="form-control" required maxlength="6" placeholder="Ex: A1B2C3" style="text-transform: uppercase;">
+            </div>
+            <button type="submit" class="btn btn-secondary">Entrar no Grupo</button>
+          </form>
+        </div>
+
+        <!-- APARÊNCIA & BACKUP -->
+        <div class="card">
+          <h3>Preferências</h3>
+          <div class="form-group">
+            <label>Tema da Interface</label>
+            <select id="theme-select" class="form-control" onchange="changeTheme(this.value)">
+              <option value="light">Claro</option>
+              <option value="dark">Escuro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Backup dos Dados do Sistema</h3>
+          <div class="btn-group">
+            <button class="btn btn-secondary" onclick="exportData()">Exportar JSON</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">Importar JSON</button>
+          </div>
+          <input type="file" id="import-file" style="display: none;" accept=".json" onchange="importData(event)">
+        </div>
+      </section>
+    </main>
+
+    <!-- NAVEGAÇÃO INFERIOR -->
+    <nav class="bottom-nav">
+      <button class="nav-btn" onclick="switchPage('pets')">🐾<span>Pets</span></button>
+      <button class="nav-btn" onclick="switchPage('remedios')">💊<span>Remédios</span></button>
+      <button class="nav-btn dash-btn" onclick="switchPage('dashboard')">📊</button>
+      <button class="nav-btn" onclick="switchPage('admin')">📋<span>Admin</span></button>
+      <button class="nav-btn" onclick="switchPage('config')">⚙️<span>Config</span></button>
+    </nav>
+  </div>
+
+</div>
+
+<!-- MODAL HISTÓRICO DE PESO -->
+<div id="weight-modal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <h3>Histórico de Peso</h3>
+    <form onsubmit="addWeightRecord(event)">
+      <input type="hidden" id="weight-pet-id">
+      <div class="form-group">
+        <label>Novo Peso (kg)</label>
+        <input type="number" step="0.01" id="weight-val" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label>Data do Registro</label>
+        <input type="date" id="weight-date" class="form-control" required>
+      </div>
+      <button type="submit" class="btn">Registrar Peso</button>
+    </form>
+    <div id="weight-history-list" style="margin-top: 16px;"></div>
+    <button class="btn btn-secondary" style="margin-top: 12px;" onclick="closeWeightModal()">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL GENÉRICO DE AVISO / ERRO DE LOGIN -->
+<div id="alert-modal" class="modal-overlay" style="display: none;">
+  <div class="modal-content" style="text-align: center;">
+    <h3 id="alert-title" style="color: var(--danger-badge);">Aviso</h3>
+    <p id="alert-message" style="margin: 16px 0; font-size: 0.95rem; color: var(--text-main);"></p>
+    <button class="btn" onclick="closeAlertModal()">OK</button>
+  </div>
+</div>
+
+<!-- SIMULADOR DE E-MAIL RECEBIDO -->
+<div id="email-simulator-modal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <div style="background: #e1f5fe; border: 1px solid #81d4fa; padding: 8px; border-radius: 4px; font-size: 0.75rem; color: #0277bd; margin-bottom: 12px;">
+      📬 <strong>Simulador de Servidor de E-mail</strong>
+    </div>
+    <h3 id="email-sim-subject" style="font-size: 1rem; margin-bottom: 8px;"></h3>
+    <p style="font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+      <strong>Para:</strong> <span id="email-sim-to"></span>
+    </p>
+    <div id="email-sim-body" style="font-size: 0.9rem; padding: 12px 0; white-space: pre-line;"></div>
+    <button class="btn btn-secondary" onclick="closeEmailSimulator()">Fechar E-mail</button>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   ESTADO GLOBAL DA APLICAÇÃO E PERSISTÊNCIA
+   ========================================================================== */
+const STORAGE_KEY = 'petmeds_data';
+
+let db = {
+  users: [],       // { id, name, email, password, receiveEmailNotif: true }
+  families: [],    // { id, code, name, adminId, members: [{ userId, role: 'admin'|'cuidador'|'visualizador', receiveEmail: true }] }
+  pets: [],        // { id, familyId, name, species, birth, weightHistory: [{ weight, date }] }
+  medications: [], // { id, familyId, name, lab, qty, unit, buyDate, expDate }
+  treatments: [],  // { id, familyId, petId, medId, dosage, times: [], intervalDays: 1, durationType: 'indefinite', endDate: null }
+  doses: [],       // { id, familyId, treatmentId, petId, medId, scheduledDateTime, status: 'pending'|'done'|'late'|'skipped', actualDateTime: null }
+  recoveryCodes: []// { email, code, expiresAt }
+};
+
+let currentUser = null;
+let currentFamily = null;
+let activePetId = null;
+let currentWeekOffset = 0;
+let pendingDelaySuggestion = null;
+
+function generateCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function initDB() {
+  const data = localStorage.getItem(STORAGE_KEY);
+  if (data) {
+    try { db = JSON.parse(data); } catch(e) { console.error("Erro ao carregar dados", e); }
+  }
+  if (!db.users) db.users = [];
+  if (!db.families) db.families = [];
+  if (!db.pets) db.pets = [];
+  if (!db.medications) db.medications = [];
+  if (!db.treatments) db.treatments = [];
+  if (!db.doses) db.doses = [];
+  if (!db.recoveryCodes) db.recoveryCodes = [];
+
+  // Garantir códigos para famílias antigas
+  db.families.forEach(f => {
+    if (!f.code) f.code = generateCode();
+  });
+
+  // Restaurar sessão
+  const sessionUserId = sessionStorage.getItem('petmeds_session_user');
+  if (sessionUserId) {
+    const user = db.users.find(u => u.id === sessionUserId);
+    if (user) {
+      currentUser = user;
+      loadUserFamily();
+    }
+  }
+}
+
+function saveDB() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+
+/* ==========================================================================
+   ALERT MODAL
+   ========================================================================== */
+function showAlertModal(title, message) {
+  document.getElementById('alert-title').innerText = title;
+  document.getElementById('alert-message').innerText = message;
+  document.getElementById('alert-modal').style.display = 'flex';
+}
+
+function closeAlertModal() {
+  document.getElementById('alert-modal').style.display = 'none';
+}
+
+function showSimulatedEmail(to, subject, body) {
+  document.getElementById('email-sim-to').innerText = to;
+  document.getElementById('email-sim-subject').innerText = subject;
+  document.getElementById('email-sim-body').innerText = body;
+  document.getElementById('email-simulator-modal').style.display = 'flex';
+}
+
+function closeEmailSimulator() {
+  document.getElementById('email-simulator-modal').style.display = 'none';
+}
+
+/* ==========================================================================
+   SISTEMA DE AUTENTICAÇÃO E RECUPERAÇÃO DE SENHA
+   ========================================================================== */
+let authMode = 'login';
+
+function switchAuthMode(mode) {
+  authMode = mode;
+  const tabs = document.querySelectorAll('.auth-tab');
+  tabs[0].classList.toggle('active', mode === 'login');
+  tabs[1].classList.toggle('active', mode === 'register');
+  
+  document.getElementById('group-name').style.display = mode === 'register' ? 'block' : 'none';
+  document.getElementById('group-confirm-password').style.display = mode === 'register' ? 'block' : 'none';
+  document.getElementById('auth-btn-submit').innerText = mode === 'login' ? 'Entrar' : 'Cadastrar e Entrar';
+}
+
+function openForgotPasswordView() {
+  document.getElementById('auth-main-view').style.display = 'none';
+  document.getElementById('auth-forgot-view').style.display = 'block';
+  document.getElementById('auth-reset-view').style.display = 'none';
+}
+
+function closeForgotPasswordView() {
+  document.getElementById('auth-main-view').style.display = 'block';
+  document.getElementById('auth-forgot-view').style.display = 'none';
+  document.getElementById('auth-reset-view').style.display = 'none';
+}
+
+function handleAuthSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('auth-email').value.trim().toLowerCase();
+  const password = document.getElementById('auth-password').value;
+
+  if (authMode === 'login') {
+    const user = db.users.find(u => u.email === email && u.password === password);
+    if (user) {
+      loginUser(user);
+    } else {
+      showAlertModal('Falha na Autenticação', 'E-mail ou senha incorretos. Por favor, tente novamente ou use "Esqueci minha senha".');
+    }
+  } else {
+    const name = document.getElementById('auth-name').value.trim();
+    const confirmPassword = document.getElementById('auth-confirm-password').value;
+
+    if (password !== confirmPassword) {
+      showAlertModal('Erro no Cadastro', 'As senhas digitadas não coincidem!');
+      return;
+    }
+
+    if (db.users.some(u => u.email === email)) {
+      showAlertModal('Erro no Cadastro', 'Este e-mail já está cadastrado no sistema.');
+      return;
+    }
+
+    const newUser = {
+      id: 'usr_' + Date.now(),
+      name: name,
+      email: email,
+      password: password,
+      receiveEmailNotif: true
+    };
+
+    const newFamily = {
+      id: 'fam_' + Date.now(),
+      code: generateCode(),
+      name: `Família de ${name.split(' ')[0]}`,
+      adminId: newUser.id,
+      members: [{ userId: newUser.id, role: 'admin', receiveEmail: true }]
+    };
+
+    db.users.push(newUser);
+    db.families.push(newFamily);
+    saveDB();
+
+    loginUser(newUser);
+  }
+}
+
+function handleSendRecoveryCode(e) {
+  e.preventDefault();
+  const email = document.getElementById('recovery-email').value.trim().toLowerCase();
+  const user = db.users.find(u => u.email === email);
+
+  if (!user) {
+    showAlertModal('E-mail Não Encontrado', 'Não encontramos nenhuma conta cadastrada com esse e-mail.');
+    return;
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  db.recoveryCodes = db.recoveryCodes.filter(r => r.email !== email);
+  db.recoveryCodes.push({
+    email: email,
+    code: code,
+    expiresAt: Date.now() + 15 * 60 * 1000
+  });
+  saveDB();
+
+  showSimulatedEmail(
+    email,
+    '🔑 Código Provisório de Acesso - PetMeds',
+    `Olá ${user.name},\n\nRecebemos uma solicitação de recuperação de senha para a sua conta.\n\nSeu código de acesso provisório é: ${code}\n\nUtilize este código para redefinir sua senha na tela da aplicação.`
+  );
+
+  document.getElementById('auth-forgot-view').style.display = 'none';
+  document.getElementById('auth-reset-view').style.display = 'block';
+}
+
+function handleResetPasswordSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('recovery-email').value.trim().toLowerCase();
+  const code = document.getElementById('reset-code').value.trim();
+  const newPass = document.getElementById('reset-new-pass').value;
+  const confirmPass = document.getElementById('reset-confirm-pass').value;
+
+  if (newPass !== confirmPass) {
+    showAlertModal('Erro na Redefinição', 'A confirmação de senha não coincide com a nova senha.');
+    return;
+  }
+
+  const recoveryRecord = db.recoveryCodes.find(r => r.email === email && r.code === code && r.expiresAt > Date.now());
+
+  if (!recoveryRecord) {
+    showAlertModal('Código Inválido', 'O código informado é inválido ou já expirou. Tente solicitar um novo código.');
+    return;
+  }
+
+  const user = db.users.find(u => u.email === email);
+  if (user) {
+    user.password = newPass;
+    db.recoveryCodes = db.recoveryCodes.filter(r => r.email !== email);
+    saveDB();
+
+    showAlertModal('Sucesso!', 'Sua senha foi redefinida com sucesso. Faça login com sua nova senha.');
+    closeForgotPasswordView();
+  }
+}
+
+function loginUser(user) {
+  currentUser = user;
+  sessionStorage.setItem('petmeds_session_user', user.id);
+  loadUserFamily();
+  renderApp();
+}
+
+function logout() {
+  currentUser = null;
+  currentFamily = null;
+  sessionStorage.removeItem('petmeds_session_user');
+  document.getElementById('auth-screen').style.display = 'block';
+  document.getElementById('app-interface').style.display = 'none';
+}
+
+function loadUserFamily() {
+  currentFamily = db.families.find(f => f.members.some(m => m.userId === currentUser.id));
+}
+
+function getUserRole() {
+  if (!currentFamily || !currentUser) return null;
+  const member = currentFamily.members.find(m => m.userId === currentUser.id);
+  return member ? member.role : null;
+}
+
+/* ==========================================================================
+   PERFIL DE USUÁRIO & AÇÕES DE CONTA
+   ========================================================================== */
+function handleUpdateProfile(e) {
+  e.preventDefault();
+  const name = document.getElementById('profile-name').value.trim();
+  const email = document.getElementById('profile-email').value.trim().toLowerCase();
+  const pass = document.getElementById('profile-pass').value;
+
+  if (db.users.some(u => u.email === email && u.id !== currentUser.id)) {
+    showAlertModal('Erro ao Atualizar', 'Este e-mail já está sendo utilizado por outro usuário.');
+    return;
+  }
+
+  currentUser.name = name;
+  currentUser.email = email;
+  if (pass) currentUser.password = pass;
+
+  saveDB();
+  showAlertModal('Perfil Atualizado', 'Seus dados foram atualizados com sucesso!');
+  updateHeaderInfo();
+}
+
+function handleDeleteAccount() {
+  if (!confirm("Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.")) return;
+
+  if (currentFamily) {
+    currentFamily.members = currentFamily.members.filter(m => m.userId !== currentUser.id);
+    if (currentFamily.members.length === 0 || currentFamily.adminId === currentUser.id) {
+      db.families = db.families.filter(f => f.id !== currentFamily.id);
+      db.pets = db.pets.filter(p => p.familyId !== currentFamily.id);
+      db.medications = db.medications.filter(m => m.familyId !== currentFamily.id);
+      db.treatments = db.treatments.filter(t => t.familyId !== currentFamily.id);
+      db.doses = db.doses.filter(d => d.familyId !== currentFamily.id);
+    }
+  }
+
+  db.users = db.users.filter(u => u.id !== currentUser.id);
+  saveDB();
+  logout();
+}
+
+function toggleUserEmailNotif(enabled) {
+  currentUser.receiveEmailNotif = enabled;
+  saveDB();
+}
+
+/* ==========================================================================
+   ROTEAMENTO E INTERFACE
+   ========================================================================== */
+function renderApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-interface').style.display = 'block';
+
+  updateHeaderInfo();
+  generateScheduledDoses();
+  
+  if (!activePetId && getFamilyPets().length > 0) {
+    activePetId = getFamilyPets()[0].id;
+  }
+
+  renderDashboard();
+  renderPets();
+  renderMeds();
+  renderAdmin();
+  renderConfig();
+}
+
+function updateHeaderInfo() {
+  document.getElementById('header-user-name').innerText = currentUser.name;
+  const role = getUserRole();
+  const roleLabels = { admin: 'Admin', cuidador: 'Cuidador', visualizador: 'Visualizador' };
+  document.getElementById('header-role-badge').innerText = roleLabels[role] || 'Membro';
+}
+
+function switchPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${pageId}`).classList.add('active');
+
+  const btns = document.querySelectorAll('.bottom-nav .nav-btn');
+  btns.forEach(b => b.classList.remove('active'));
+
+  const map = { pets: 0, remedios: 1, dashboard: 2, admin: 3, config: 4 };
+  if (map[pageId] !== undefined) btns[map[pageId]].classList.add('active');
+
+  if (pageId === 'dashboard') renderDashboard();
+  if (pageId === 'pets') renderPets();
+  if (pageId === 'remedios') renderMeds();
+  if (pageId === 'admin') renderAdmin();
+  if (pageId === 'config') renderConfig();
+}
+
+/* ==========================================================================
+   GESTÃO DE PETS
+   ========================================================================== */
+function getFamilyPets() {
+  return db.pets.filter(p => p.familyId === currentFamily?.id);
+}
+
+function savePet(e) {
+  e.preventDefault();
+  if (getUserRole() === 'visualizador') {
+    showAlertModal('Acesso Restrito', 'Visualizadores não têm permissão para cadastrar/editar pets.');
+    return;
+  }
+
+  const id = document.getElementById('pet-id').value;
+  const name = document.getElementById('pet-name').value.trim();
+  const species = document.getElementById('pet-species').value;
+  const birth = document.getElementById('pet-birth').value;
+
+  if (id) {
+    const pet = db.pets.find(p => p.id === id);
+    if (pet) {
+      pet.name = name;
+      pet.species = species;
+      pet.birth = birth;
+    }
+  } else {
+    const newPet = {
+      id: 'pet_' + Date.now(),
+      familyId: currentFamily.id,
+      name, species, birth,
+      weightHistory: []
+    };
+    db.pets.push(newPet);
+    if (!activePetId) activePetId = newPet.id;
+  }
+
+  saveDB();
+  resetPetForm();
+  renderPets();
+  renderDashboard();
+}
+
+function editPet(id) {
+  const pet = db.pets.find(p => p.id === id);
+  if (!pet) return;
+  document.getElementById('pet-id').value = pet.id;
+  document.getElementById('pet-name').value = pet.name;
+  document.getElementById('pet-species').value = pet.species;
+  document.getElementById('pet-birth').value = pet.birth;
+  document.getElementById('pet-form-title').innerText = "Editar Pet";
+}
+
+function resetPetForm() {
+  document.getElementById('form-pet').reset();
+  document.getElementById('pet-id').value = '';
+  document.getElementById('pet-form-title').innerText = "Cadastrar Novo Pet";
+}
+
+function renderPets() {
+  const list = document.getElementById('pets-list');
+  const pets = getFamilyPets();
+  const isViewer = getUserRole() === 'visualizador';
+
+  if (pets.length === 0) {
+    list.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhum pet cadastrado na família.</p></div>';
+    return;
+  }
+
+  list.innerHTML = pets.map(pet => {
+    const lastWeight = pet.weightHistory && pet.weightHistory.length > 0 
+      ? pet.weightHistory[pet.weightHistory.length - 1] 
+      : null;
+    const weightStr = lastWeight ? `${lastWeight.weight} kg (${formatDate(lastWeight.date)})` : 'Não registrado';
+
+    return `
+      <div class="card">
+        <h3>${pet.species === 'Gato' ? '🐱' : pet.species === 'Cão' ? '🐶' : '🐾'} ${pet.name}</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Espécie: ${pet.species} | Nasc.: ${formatDate(pet.birth)}
+        </p>
+        <p style="font-size: 0.85rem; margin-top: 4px;">
+          <strong>Peso Atual:</strong> ${weightStr}
+        </p>
+        <div class="btn-group">
+          <button class="btn btn-secondary btn-sm" onclick="openWeightModal('${pet.id}')">⚖️ Histórico de Peso</button>
+          ${!isViewer ? `<button class="btn btn-secondary btn-sm" onclick="editPet('${pet.id}')">✏️ Editar</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ==========================================================================
+   HISTÓRICO DE PESO
+   ========================================================================== */
+function openWeightModal(petId) {
+  document.getElementById('weight-pet-id').value = petId;
+  document.getElementById('weight-date').value = new Date().toISOString().split('T')[0];
+  renderWeightHistory(petId);
+  document.getElementById('weight-modal').style.display = 'flex';
+}
+
+function closeWeightModal() {
+  document.getElementById('weight-modal').style.display = 'none';
+}
+
+function addWeightRecord(e) {
+  e.preventDefault();
+  if (getUserRole() === 'visualizador') {
+    showAlertModal('Acesso Restrito', 'Visualizadores não podem alterar peso.');
+    return;
+  }
+
+  const petId = document.getElementById('weight-pet-id').value;
+  const weight = parseFloat(document.getElementById('weight-val').value);
+  const date = document.getElementById('weight-date').value;
+
+  const pet = db.pets.find(p => p.id === petId);
+  if (pet) {
+    if (!pet.weightHistory) pet.weightHistory = [];
+    pet.weightHistory.push({ weight, date });
+    pet.weightHistory.sort((a,b) => new Date(a.date) - new Date(b.date));
+    saveDB();
+    renderWeightHistory(petId);
+    renderPets();
+    renderDashboard();
+    document.getElementById('weight-val').value = '';
+  }
+}
+
+function renderWeightHistory(petId) {
+  const pet = db.pets.find(p => p.id === petId);
+  const container = document.getElementById('weight-history-list');
+  if (!pet || !pet.weightHistory || pet.weightHistory.length === 0) {
+    container.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-muted);">Nenhum peso registrado.</p>';
+    return;
+  }
+
+  container.innerHTML = '<h4>Registros:</h4>' + pet.weightHistory.map(wh => `
+    <div class="list-item">
+      <span>${formatDate(wh.date)}</span>
+      <strong>${wh.weight} kg</strong>
+    </div>
+  `).join('');
+}
+
+/* ==========================================================================
+   GESTÃO DE MEDICAMENTOS
+   ========================================================================== */
+function getFamilyMeds() {
+  return db.medications.filter(m => m.familyId === currentFamily?.id);
+}
+
+function saveMedication(e) {
+  e.preventDefault();
+  if (getUserRole() === 'visualizador') {
+    showAlertModal('Acesso Restrito', 'Sem permissão para alterar medicamentos.');
+    return;
+  }
+
+  const id = document.getElementById('med-id').value;
+  const name = document.getElementById('med-name').value.trim();
+  const lab = document.getElementById('med-lab').value.trim();
+  const qty = parseFloat(document.getElementById('med-qty').value);
+  const unit = document.getElementById('med-unit').value;
+  const buyDate = document.getElementById('med-buy-date').value;
+  const expDate = document.getElementById('med-exp-date').value;
+
+  if (id) {
+    const med = db.medications.find(m => m.id === id);
+    if (med) {
+      Object.assign(med, { name, lab, qty, unit, buyDate, expDate });
+    }
+  } else {
+    db.medications.push({
+      id: 'med_' + Date.now(),
+      familyId: currentFamily.id,
+      name, lab, qty, unit, buyDate, expDate
+    });
+  }
+
+  saveDB();
+  resetMedForm();
+  renderMeds();
+}
+
+function editMedication(id) {
+  const med = db.medications.find(m => m.id === id);
+  if (!med) return;
+  document.getElementById('med-id').value = med.id;
+  document.getElementById('med-name').value = med.name;
+  document.getElementById('med-lab').value = med.lab;
+  document.getElementById('med-qty').value = med.qty;
+  document.getElementById('med-unit').value = med.unit;
+  document.getElementById('med-buy-date').value = med.buyDate;
+  document.getElementById('med-exp-date').value = med.expDate;
+  document.getElementById('med-form-title').innerText = "Editar Medicamento";
+}
+
+function resetMedForm() {
+  document.getElementById('form-med').reset();
+  document.getElementById('med-id').value = '';
+  document.getElementById('med-form-title').innerText = "Cadastrar Remédio";
+}
+
+function renderMeds() {
+  const list = document.getElementById('meds-list');
+  const meds = getFamilyMeds();
+  const today = new Date().toISOString().split('T')[0];
+  const in30Days = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
+  const isViewer = getUserRole() === 'visualizador';
+
+  if (meds.length === 0) {
+    list.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhum medicamento cadastrado.</p></div>';
+    return;
+  }
+
+  list.innerHTML = meds.map(med => {
+    let badge = '';
+    if (med.expDate < today) {
+      badge = '<span class="badge badge-danger">VENCIDO</span>';
+    } else if (med.expDate <= in30Days) {
+      badge = '<span class="badge badge-warning">VENCE EM BREVE</span>';
+    }
+
+    return `
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <h3>💊 ${med.name} ${badge}</h3>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Lab: ${med.lab} | Qtd: ${med.qty} ${med.unit}
+        </p>
+        <p style="font-size: 0.85rem; margin-top: 4px;">
+          Validade: <strong>${formatDate(med.expDate)}</strong>
+        </p>
+        ${!isViewer ? `
+          <div class="btn-group" style="margin-top: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="editMedication('${med.id}')">✏️ Editar</button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+/* ==========================================================================
+   TRATAMENTOS E GERAÇÃO DE DOSES PREVISTAS
+   ========================================================================== */
+function addTimeField() {
+  const container = document.getElementById('times-container');
+  const input = document.createElement('input');
+  input.type = 'time';
+  input.className = 'form-control treat-time';
+  input.style.marginBottom = '4px';
+  input.required = true;
+  container.appendChild(input);
+}
+
+function toggleEndDate(val) {
+  document.getElementById('group-end-date').style.display = val === 'until_date' ? 'block' : 'none';
+}
+
+function saveTreatment(e) {
+  e.preventDefault();
+  if (getUserRole() === 'visualizador') {
+    showAlertModal('Acesso Restrito', 'Sem permissão para criar tratamentos.');
+    return;
+  }
+
+  const petId = document.getElementById('treat-pet').value;
+  const medId = document.getElementById('treat-med').value;
+  const dosage = document.getElementById('treat-dosage').value.trim();
+  const intervalDays = parseInt(document.getElementById('treat-interval').value);
+  const durationType = document.getElementById('treat-duration-type').value;
+  const endDate = durationType === 'until_date' ? document.getElementById('treat-end-date').value : null;
+
+  const timeInputs = document.querySelectorAll('.treat-time');
+  const times = Array.from(timeInputs).map(i => i.value).filter(v => v);
+
+  if (times.length === 0) {
+    showAlertModal('Horário Necessário', 'Adicione pelo menos um horário de administração.');
+    return;
+  }
+
+  const newTreatment = {
+    id: 'treat_' + Date.now(),
+    familyId: currentFamily.id,
+    petId, medId, dosage, times, intervalDays, durationType, endDate,
+    createdAt: new Date().toISOString()
+  };
+
+  db.treatments.push(newTreatment);
+  saveDB();
+
+  generateScheduledDoses();
+  document.getElementById('form-treatment').reset();
+  renderAdmin();
+  renderDashboard();
+}
+
+function generateScheduledDoses() {
+  if (!currentFamily) return;
+  const treatments = db.treatments.filter(t => t.familyId === currentFamily.id);
+  const today = new Date();
+
+  treatments.forEach(t => {
+    for (let i = 0; i < 30; i++) {
+      const targetDate = new Date();
+      targetDate.setDate(today.getDate() + i);
+
+      const startDate = new Date(t.createdAt);
+      const diffDays = Math.floor((targetDate - startDate) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays >= 0 && diffDays % t.intervalDays === 0) {
+        const dateStr = targetDate.toISOString().split('T')[0];
+        
+        if (t.durationType === 'until_date' && t.endDate && dateStr > t.endDate) {
+          continue;
+        }
+
+        t.times.forEach(time => {
+          const scheduledDateTime = `${dateStr}T${time}:00`;
+
+          const exists = db.doses.some(d => d.treatmentId === t.id && d.scheduledDateTime === scheduledDateTime);
+          if (!exists) {
+            db.doses.push({
+              id: 'dose_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+              familyId: currentFamily.id,
+              treatmentId: t.id,
+              petId: t.petId,
+              medId: t.medId,
+              scheduledDateTime,
+              status: 'pending',
+              actualDateTime: null
+            });
+          }
+        });
+      }
+    }
+  });
+
+  const nowStr = new Date().toISOString().substring(0, 16);
+  db.doses.forEach(d => {
+    if (d.familyId === currentFamily.id && d.status === 'pending' && d.scheduledDateTime.substring(0, 16) < nowStr) {
+      d.status = 'late';
+    }
+  });
+
+  saveDB();
+}
+
+/* ==========================================================================
+   ADMINISTRAÇÃO DE DOSES DE HOJE & MARCAÇÕES
+   ========================================================================== */
+function renderAdmin() {
+  const isViewer = getUserRole() === 'visualizador';
+
+  const petSelect = document.getElementById('treat-pet');
+  const medSelect = document.getElementById('treat-med');
+
+  petSelect.innerHTML = getFamilyPets().map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  medSelect.innerHTML = getFamilyMeds().map(m => `<option value="${m.id}">${m.name} (${m.unit})</option>`).join('');
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayDoses = db.doses
+    .filter(d => d.familyId === currentFamily?.id && d.scheduledDateTime.startsWith(todayStr))
+    .sort((a,b) => a.scheduledDateTime.localeCompare(b.scheduledDateTime));
+
+  const listContainer = document.getElementById('today-doses-list');
+
+  if (todayDoses.length === 0) {
+    listContainer.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhuma dose agendada para hoje.</p></div>';
+    return;
+  }
+
+  listContainer.innerHTML = todayDoses.map(dose => {
+    const pet = db.pets.find(p => p.id === dose.petId);
+    const med = db.medications.find(m => m.id === dose.medId);
+    const treat = db.treatments.find(t => t.id === dose.treatmentId);
+    const time = dose.scheduledDateTime.split('T')[1].substring(0, 5);
+
+    let statusBadge = '<span class="badge" style="background:var(--text-muted)">Pendente</span>';
+    if (dose.status === 'done') statusBadge = '<span class="badge badge-success">Administrada</span>';
+    if (dose.status === 'late') statusBadge = '<span class="badge badge-danger">Atrasada</span>';
+    if (dose.status === 'skipped') statusBadge = '<span class="badge badge-warning">Não dada</span>';
+
+    return `
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong>⏰ ${time} - ${pet ? pet.name : 'Pet'}</strong>
+          ${statusBadge}
+        </div>
+        <p style="font-size: 0.9rem; margin-top:4px;">
+          Remédio: <strong>${med ? med.name : 'Medicamento'}</strong> (${treat ? treat.dosage : ''})
+        </p>
+        ${!isViewer && dose.status !== 'done' ? `
+          <div class="btn-group" style="margin-top: 10px;">
+            <button class="btn btn-sm" onclick="markDose('${dose.id}', 'now')">Dei agora</button>
+            <button class="btn btn-secondary btn-sm" onclick="markDose('${dose.id}', 'late')">Dei c/ atraso</button>
+            <button class="btn btn-danger btn-sm" onclick="markDose('${dose.id}', 'skip')">Não dei</button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function markDose(doseId, action) {
+  const dose = db.doses.find(d => d.id === doseId);
+  if (!dose) return;
+
+  const now = new Date();
+  dose.actualDateTime = now.toISOString();
+
+  if (action === 'now') {
+    dose.status = 'done';
+  } else if (action === 'skip') {
+    dose.status = 'skipped';
+  } else if (action === 'late') {
+    dose.status = 'done';
+    
+    const scheduled = new Date(dose.scheduledDateTime);
+    const diffMinutes = Math.round((now - scheduled) / (1000 * 60));
+
+    if (diffMinutes > 15) {
+      const scheduledTimeStr = dose.scheduledDateTime.split('T')[1].substring(0, 5);
+      const newTimeStr = now.toTimeString().substring(0, 5);
+
+      pendingDelaySuggestion = {
+        treatmentId: dose.treatmentId,
+        oldTime: scheduledTimeStr,
+        newTime: newTimeStr
+      };
+
+      showDelayBanner(scheduledTimeStr, newTimeStr);
+    }
+  }
+
+  saveDB();
+  renderAdmin();
+  renderDashboard();
+}
+
+function showDelayBanner(oldTime, newTime) {
+  const banner = document.getElementById('delay-suggestion-banner');
+  banner.style.display = 'block';
+  banner.innerHTML = `
+    <p style="font-size:0.85rem; margin-bottom:8px;">
+      ⚠️ Você administrou com atraso (Previsto: <strong>${oldTime}</strong> → Atual: <strong>${newTime}</strong>). 
+      Deseja reajustar os próximos lembretes para este novo horário?
+    </p>
+    <div class="btn-group">
+      <button class="btn btn-sm" onclick="acceptDelayAdjust()">Ajustar Agenda</button>
+      <button class="btn btn-secondary btn-sm" onclick="dismissDelayAdjust()">Manter Agenda</button>
+    </div>
+  `;
+}
+
+function acceptDelayAdjust() {
+  if (pendingDelaySuggestion) {
+    const treat = db.treatments.find(t => t.id === pendingDelaySuggestion.treatmentId);
+    if (treat) {
+      const idx = treat.times.indexOf(pendingDelaySuggestion.oldTime);
+      if (idx !== -1) {
+        treat.times[idx] = pendingDelaySuggestion.newTime;
+        saveDB();
+        showAlertModal('Agenda Atualizada', `Os próximos lembretes foram ajustados para as ${pendingDelaySuggestion.newTime}.`);
+      }
+    }
+  }
+  dismissDelayAdjust();
+  renderAdmin();
+}
+
+function dismissDelayAdjust() {
+  pendingDelaySuggestion = null;
+  document.getElementById('delay-suggestion-banner').style.display = 'none';
+}
+
+/* ==========================================================================
+   DASHBOARD & NAVEGAÇÃO SEMANAL
+   ========================================================================== */
+function renderDashboard() {
+  const pets = getFamilyPets();
+  const tabsContainer = document.getElementById('dash-pet-tabs');
+
+  if (pets.length === 0) {
+    tabsContainer.innerHTML = '<span style="color:var(--text-muted)">Nenhum pet cadastrado.</span>';
+    return;
+  }
+
+  if (!activePetId || !pets.some(p => p.id === activePetId)) {
+    activePetId = pets[0].id;
+  }
+
+  tabsContainer.innerHTML = pets.map(p => `
+    <div class="pet-tab ${p.id === activePetId ? 'active' : ''}" onclick="selectDashPet('${p.id}')">
+      ${p.name}
+    </div>
+  `).join('');
+
+  const activePet = pets.find(p => p.id === activePetId);
+
+  const lastWeight = activePet.weightHistory && activePet.weightHistory.length > 0 
+    ? activePet.weightHistory[activePet.weightHistory.length - 1].weight + ' kg'
+    : '-- kg';
+  document.getElementById('kpi-weight').innerText = lastWeight;
+
+  const weekRange = getWeekDateRange(currentWeekOffset);
+  const weekDoses = db.doses.filter(d => 
+    d.petId === activePetId && 
+    d.scheduledDateTime >= weekRange.startStr && 
+    d.scheduledDateTime <= weekRange.endStr
+  );
+  const doneDoses = weekDoses.filter(d => d.status === 'done').length;
+  document.getElementById('kpi-doses').innerText = doneDoses;
+
+  const activeTreatments = db.treatments.filter(t => t.petId === activePetId);
+  document.getElementById('kpi-meds').innerText = activeTreatments.length;
+
+  renderWeekGrid(weekRange);
+}
+
+function selectDashPet(petId) {
+  activePetId = petId;
+  renderDashboard();
+}
+
+function changeWeek(offsetDelta) {
+  currentWeekOffset += offsetDelta;
+  renderDashboard();
+}
+
+function getWeekDateRange(offset) {
+  const curr = new Date();
+  const first = curr.getDate() - curr.getDay() + (offset * 7);
+  
+  const startDate = new Date(curr.setDate(first));
+  startDate.setHours(0,0,0,0);
+  
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 6);
+  endDate.setHours(23,59,59,999);
+
+  return {
+    startDate,
+    endDate,
+    startStr: startDate.toISOString(),
+    endStr: endDate.toISOString()
+  };
+}
+
+function renderWeekGrid(weekRange) {
+  const weekGrid = document.getElementById('week-grid');
+  const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  let html = '';
+  for (let i = 0; i < 7; i++) {
+    const dayDate = new Date(weekRange.startDate);
+    dayDate.setDate(weekRange.startDate.getDate() + i);
+    const dateStr = dayDate.toISOString().split('T')[0];
+    const isToday = dateStr === todayStr;
+
+    const dayDoses = db.doses.filter(d => d.petId === activePetId && d.scheduledDateTime.startsWith(dateStr));
+    
+    let dots = '';
+    if (dayDoses.length === 0) {
+      dots = '<span style="color:var(--text-muted); font-size:0.7rem;">-</span>';
+    } else {
+      dots = dayDoses.map(d => {
+        if (d.status === 'done') return '<span class="dose-dot" style="color:var(--success-badge)">✓</span>';
+        if (d.status === 'late') return '<span class="dose-dot" style="color:var(--danger-badge)">⚠</span>';
+        return '<span class="dose-dot" style="color:var(--text-muted)">○</span>';
+      }).join('');
+    }
+
+    html += `
+      <div class="day-col ${isToday ? 'today' : ''}">
+        <div>${days[i]}</div>
+        <div style="font-size:0.7rem; color:var(--text-muted);">${dayDate.getDate()}</div>
+        ${dots}
+      </div>
+    `;
+  }
+
+  weekGrid.innerHTML = html;
+  
+  const label = currentWeekOffset === 0 
+    ? 'Semana Atual' 
+    : currentWeekOffset > 0 
+    ? `+${currentWeekOffset} Semana(s)` 
+    : `${currentWeekOffset} Semana(s)`;
+  document.getElementById('week-label').innerText = label;
+}
+
+/* ==========================================================================
+   CONFIGURAÇÕES & AMBIENTE FAMÍLIA (COM CONVITE POR E-MAIL E CÓDIGO)
+   ========================================================================== */
+function renderConfig() {
+  renderFamilySection();
+  document.getElementById('profile-name').value = currentUser.name;
+  document.getElementById('profile-email').value = currentUser.email;
+  document.getElementById('email-notif-user').checked = !!currentUser.receiveEmailNotif;
+}
+
+function renderFamilySection() {
+  const container = document.getElementById('family-info-container');
+  if (!currentFamily) {
+    container.innerHTML = '<p>Você não está em nenhuma família.</p>';
+    return;
+  }
+
+  const isAdmin = getUserRole() === 'admin';
+
+  let membersHtml = currentFamily.members.map(m => {
+    const u = db.users.find(user => user.id === m.userId);
+    const uName = u ? u.name : 'Desconhecido';
+    const uEmail = u ? u.email : '';
+    
+    return `
+      <div class="list-item">
+        <div>
+          <strong>${uName}</strong> (${uEmail})
+          <br><span style="font-size:0.75rem; color:var(--text-muted);">Função: ${m.role}</span>
+        </div>
+        ${isAdmin && m.userId !== currentUser.id ? `
+          <div>
+            <select class="form-control" style="font-size:0.75rem; padding:4px;" onchange="updateMemberRole('${m.userId}', this.value)">
+              <option value="admin" ${m.role==='admin'?'selected':''}>Admin</option>
+              <option value="cuidador" ${m.role==='cuidador'?'selected':''}>Cuidador</option>
+              <option value="visualizador" ${m.role==='visualizador'?'selected':''}>Visualizador</option>
+            </select>
+            <button class="btn btn-danger btn-sm" style="margin-top:4px; padding:2px 6px;" onclick="removeMember('${m.userId}')">Remover</button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+
+  let adminControls = '';
+  if (isAdmin) {
+    adminControls = `
+      <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+        <h4>🔑 Código de Convite da Família</h4>
+        <p style="font-size:0.8rem; color:var(--text-muted);">Compartilhe o código abaixo para que outros entrem no seu grupo:</p>
+        <div class="code-box">${currentFamily.code}</div>
+
+        <h4 style="margin-top: 16px;">✉️ Convidar por E-mail Direto</h4>
+        <form onsubmit="inviteMemberByEmail(event)" style="margin-top: 8px;">
+          <div class="form-group">
+            <input type="email" id="invite-email" class="form-control" placeholder="E-mail do usuário cadastrado" required>
+          </div>
+          <div class="form-group">
+            <select id="invite-role" class="form-control">
+              <option value="cuidador">Cuidador (Gerencia doses e pets)</option>
+              <option value="visualizador">Visualizador (Apenas leitura)</option>
+              <option value="admin">Administrador (Acesso total)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-sm">Adicionar por E-mail</button>
+        </form>
+
+        <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+          <h4>Editar Família</h4>
+          <form onsubmit="handleRenameFamily(event)">
+            <div class="form-group">
+              <label>Nome do Grupo/Família</label>
+              <input type="text" id="family-name-input" class="form-control" value="${currentFamily.name}" required>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm">Renomear Família</button>
+          </form>
+          <button class="btn btn-danger btn-sm" style="margin-top: 12px;" onclick="handleDeleteFamily()">Excluir Família Completa</button>
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <p><strong>Nome do Grupo:</strong> ${currentFamily.name}</p>
+    <h4 style="margin-top:12px;">Membros Participantes:</h4>
+    ${membersHtml}
+    ${adminControls}
+  `;
+}
+
+function inviteMemberByEmail(e) {
+  e.preventDefault();
+  const email = document.getElementById('invite-email').value.trim().toLowerCase();
+  const role = document.getElementById('invite-role').value;
+
+  const targetUser = db.users.find(u => u.email === email);
+  if (!targetUser) {
+    showAlertModal('Usuário Não Encontrado', 'Não encontramos nenhum usuário com esse e-mail cadastrado no PetMeds.');
+    return;
+  }
+
+  if (currentFamily.members.some(m => m.userId === targetUser.id)) {
+    showAlertModal('Já Cadastrado', 'Este usuário já faz parte do seu grupo familiar.');
+    return;
+  }
+
+  currentFamily.members.push({ userId: targetUser.id, role, receiveEmail: true });
+  saveDB();
+
+  document.getElementById('invite-email').value = '';
+  showAlertModal('Membro Adicionado!', `${targetUser.name} agora faz parte do seu grupo familiar como ${role}.`);
+  renderConfig();
+}
+
+function handleJoinByCode(e) {
+  e.preventDefault();
+  const code = document.getElementById('join-family-code').value.trim().toUpperCase();
+  const targetFamily = db.families.find(f => f.code === code);
+
+  if (!targetFamily) {
+    showAlertModal('Código Inválido', 'Não encontramos nenhuma família associada a este código.');
+    return;
+  }
+
+  if (targetFamily.id === currentFamily?.id) {
+    showAlertModal('Aviso', 'Você já pertence a esta família.');
+    return;
+  }
+
+  // Remover de membros da família antiga caso fosse membro simples
+  if (currentFamily) {
+    currentFamily.members = currentFamily.members.filter(m => m.userId !== currentUser.id);
+  }
+
+  targetFamily.members.push({ userId: currentUser.id, role: 'cuidador', receiveEmail: true });
+  currentFamily = targetFamily;
+  saveDB();
+
+  document.getElementById('join-family-code').value = '';
+  showAlertModal('Sucesso!', `Você entrou no grupo "${targetFamily.name}" como Cuidador!`);
+  renderApp();
+}
+
+function handleRenameFamily(e) {
+  e.preventDefault();
+  const newName = document.getElementById('family-name-input').value.trim();
+  if (newName && currentFamily) {
+    currentFamily.name = newName;
+    saveDB();
+    showAlertModal('Sucesso', 'Nome da família atualizado!');
+    renderConfig();
+  }
+}
+
+function handleDeleteFamily() {
+  if (!confirm("Atenção! Excluir a família apagará permanentemente todos os pets, tratamentos e histórico compartilhados. Continuar?")) return;
+
+  const famId = currentFamily.id;
+  db.families = db.families.filter(f => f.id !== famId);
+  db.pets = db.pets.filter(p => p.familyId !== famId);
+  db.medications = db.medications.filter(m => m.familyId !== famId);
+  db.treatments = db.treatments.filter(t => t.familyId !== famId);
+  db.doses = db.doses.filter(d => d.familyId !== famId);
+
+  const newFam = {
+    id: 'fam_' + Date.now(),
+    code: generateCode(),
+    name: `Família de ${currentUser.name.split(' ')[0]}`,
+    adminId: currentUser.id,
+    members: [{ userId: currentUser.id, role: 'admin', receiveEmail: true }]
+  };
+  db.families.push(newFam);
+  currentFamily = newFam;
+
+  saveDB();
+  showAlertModal('Família Excluída', 'A família foi removida e seu ambiente pessoal foi recriado.');
+  renderApp();
+}
+
+function updateMemberRole(userId, newRole) {
+  const member = currentFamily.members.find(m => m.userId === userId);
+  if (member) {
+    member.role = newRole;
+    saveDB();
+    renderConfig();
+  }
+}
+
+function removeMember(userId) {
+  if (confirm("Deseja remover este membro da família?")) {
+    currentFamily.members = currentFamily.members.filter(m => m.userId !== userId);
+    saveDB();
+    renderConfig();
+  }
+}
+
+/* ==========================================================================
+   SISTEMA DE NOTIFICAÇÕES (PUSH & EMAIL SIMULADO)
+   ========================================================================== */
+function testNotification() {
+  if (!("Notification" in window)) {
+    showAlertModal("Não Suportado", "Seu navegador não suporta notificações de área de trabalho.");
+    return;
+  }
+
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      new Notification("🐾 PetMeds", { body: "Notificações ativadas com sucesso!" });
+    } else {
+      showAlertModal("Permissão Negada", "Você precisa permitir as notificações nas configurações do seu navegador.");
+    }
+  });
+}
+
+setInterval(() => {
+  if (!currentUser || !currentFamily) return;
+
+  const now = new Date();
+  const currentMinStr = now.toISOString().substring(0, 16);
+
+  const pendingDoses = db.doses.filter(d => 
+    d.familyId === currentFamily.id &&
+    d.status === 'pending' &&
+    d.scheduledDateTime.substring(0, 16) === currentMinStr &&
+    !d.notified
+  );
+
+  pendingDoses.forEach(dose => {
+    dose.notified = true;
+    const pet = db.pets.find(p => p.id === dose.petId);
+    const med = db.medications.find(m => m.id === dose.medId);
+    const treat = db.treatments.find(t => t.id === dose.treatmentId);
+
+    const title = `🐾 Lembrete: ${pet ? pet.name : 'Pet'}`;
+    const body = `Hora de tomar ${med ? med.name : 'Medicamento'} (${treat ? treat.dosage : ''})`;
+
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body });
+    }
+
+    currentFamily.members.forEach(member => {
+      const u = db.users.find(usr => usr.id === member.userId);
+      if (u && u.receiveEmailNotif && member.receiveEmail) {
+        console.log(`[SIMULAÇÃO E-MAIL ENVIADO PARA ${u.email}]: ${title} - ${body}`);
+      }
+    });
+  });
+
+  saveDB();
+}, 60000);
+
+/* ==========================================================================
+   TEMA & EXPORTAÇÃO/IMPORTAÇÃO DE DADOS
+   ========================================================================== */
+function changeTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('petmeds_theme', theme);
+}
+
+function loadSavedTheme() {
+  const theme = localStorage.getItem('petmeds_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  const select = document.getElementById('theme-select');
+  if (select) select.value = theme;
+}
+
+function exportData() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+  const dlAnchor = document.createElement('a');
+  dlAnchor.setAttribute("href", dataStr);
+  dlAnchor.setAttribute("download", `petmeds_backup_${new Date().toISOString().split('T')[0]}.json`);
+  document.body.appendChild(dlAnchor);
+  dlAnchor.click();
+  dlAnchor.remove();
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const importedDb = JSON.parse(evt.target.result);
+      if (importedDb && importedDb.users && importedDb.pets) {
+        db = importedDb;
+        saveDB();
+        showAlertModal('Sucesso', 'Dados importados com sucesso!');
+        if (currentUser) loginUser(currentUser);
+      } else {
+        showAlertModal('Erro', 'Formato de arquivo JSON inválido.');
+      }
+    } catch(err) {
+      showAlertModal('Erro', 'Erro ao ler o arquivo JSON.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+/* ==========================================================================
+   INICIALIZAÇÃO
+   ========================================================================== */
+window.addEventListener('DOMContentLoaded', () => {
+  initDB();
+  loadSavedTheme();
+
+  if (currentUser) {
+    renderApp();
+  } else {
+    document.getElementById('auth-screen').style.display = 'block';
+    document.getElementById('app-interface').style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>
