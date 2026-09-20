@@ -199,9 +199,9 @@
     .kpi-label { font-size: 0.7rem; color: var(--text-muted); }
 
     .week-carousel { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .dashboard-week-card { min-height: calc(100vh - 310px); margin-bottom: 0; }
-    .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-    .day-col { background: var(--bg-card); color: var(--text-main); border-radius: var(--radius-sm); padding: 6px 2px; border: 1px solid var(--border-color); font: inherit; font-size: 0.75rem; cursor: pointer; width: 100%; }
+    .dashboard-week-card { height: clamp(180px, calc(100vh - 340px), 360px); margin-bottom: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .week-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; flex: 1; min-height: 0; }
+    .day-col { background: var(--bg-card); color: var(--text-main); border-radius: var(--radius-sm); padding: 10px 2px; border: 1px solid var(--border-color); font: inherit; font-size: 0.75rem; cursor: pointer; width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .day-col.today { border-color: var(--primary); font-weight: bold; }
     .day-col:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
     .dose-dot { display: block; font-size: 1rem; margin-top: 4px; }
