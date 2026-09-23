@@ -6,6 +6,7 @@ let currentFamily = null;
 let activePetId = null;
 let currentWeekOffset = 0;
 let pendingDelaySuggestion = null;
+let pendingDoseConfirmationId = null;
 let activeDayDetailsDate = null;
 let authMode = 'login';
 
@@ -59,6 +60,10 @@ function getUserRole() {
 
 function getFamilyPets() {
   return db.pets.filter(pet => pet.familyId === currentFamily?.id);
+}
+
+function getActiveFamilyPets() {
+  return getFamilyPets().filter(pet => (pet.status || 'active') === 'active');
 }
 
 function getFamilyMeds() {
@@ -724,6 +729,7 @@ function renderDoseCard(dose, isViewer) {
 async function markDose(doseId, action) {
   const dose = db.doses.find(item => item.id === doseId);
   if (!dose) return;
+  if (action === 'now') return openDoseConfirmation(doseId);
   const now = new Date();
   const values = { actual_at: now.toISOString(), status: action === 'skip' ? 'skipped' : 'done' };
   try {
@@ -732,6 +738,39 @@ async function markDose(doseId, action) {
     const delayThreshold = treatment?.scheduleMode === 'window' ? treatment.toleranceMinutes : 15;
     if (action === 'late' && now - new Date(dose.scheduledDateTime) > delayThreshold * 60000) {
       pendingDelaySuggestion = { doseId, treatmentId: dose.treatmentId, oldTime: dose.scheduledDateTime.substring(11, 16), newTime: now.toTimeString().substring(0, 5), actualAt: now.toISOString() };
+      showDelayBanner(pendingDelaySuggestion.oldTime, pendingDelaySuggestion.newTime);
+    }
+    await refreshApp();
+  } catch (error) { showError(error, 'Não foi possível registrar a dose'); }
+}
+
+function openDoseConfirmation(doseId) {
+  pendingDoseConfirmationId = doseId;
+  document.getElementById('dose-confirm-actual-at').value = toLocalDateTimeString();
+  document.getElementById('dose-confirm-modal').style.display = 'flex';
+}
+
+function closeDoseConfirmation() {
+  pendingDoseConfirmationId = null;
+  document.getElementById('dose-confirm-modal').style.display = 'none';
+}
+
+async function confirmDoseNow(event) {
+  event.preventDefault();
+  const doseId = pendingDoseConfirmationId;
+  const actualAt = document.getElementById('dose-confirm-actual-at').value;
+  if (!doseId || !actualAt) return showAlertModal('Horário necessário', 'Informe quando a dose foi administrada.');
+  const dose = db.doses.find(item => item.id === doseId);
+  if (!dose) return closeDoseConfirmation();
+  const administeredAt = new Date(actualAt);
+  if (Number.isNaN(administeredAt.getTime())) return showAlertModal('Data inválida', 'Informe uma data e horário válidos.');
+  closeDoseConfirmation();
+  const treatment = db.treatments.find(item => item.id === dose.treatmentId);
+  const delayThreshold = treatment?.scheduleMode === 'window' ? treatment.toleranceMinutes : 15;
+  try {
+    await request(supabaseClient.from('doses').update({ actual_at: administeredAt.toISOString(), status: 'done' }).eq('id', doseId));
+    if (administeredAt - new Date(dose.scheduledDateTime) > delayThreshold * 60000) {
+      pendingDelaySuggestion = { doseId, treatmentId: dose.treatmentId, oldTime: dose.scheduledDateTime.substring(11, 16), newTime: toLocalDateTimeString(administeredAt).substring(11, 16), actualAt: administeredAt.toISOString() };
       showDelayBanner(pendingDelaySuggestion.oldTime, pendingDelaySuggestion.newTime);
     }
     await refreshApp();
@@ -816,7 +855,7 @@ async function undoDose(doseId) {
 }
 
 function renderDashboard() {
-  const pets = getFamilyPets();
+  const pets = getActiveFamilyPets();
   const tabs = document.getElementById('dash-pet-tabs');
   if (!pets.length) {
     tabs.innerHTML = '<span style="color:var(--text-muted)">Nenhum pet cadastrado.</span>';
@@ -826,13 +865,14 @@ function renderDashboard() {
     document.getElementById('week-grid').innerHTML = '';
     return;
   }
-  if (!pets.some(pet => pet.id === activePetId)) activePetId = pets[0].id;
-  tabs.innerHTML = pets.map(pet => `<div class="pet-tab ${pet.id === activePetId ? 'active' : ''}" onclick="selectDashPet('${pet.id}')">${escapeHtml(pet.name)}</div>`).join('');
+  if (activePetId !== 'all' && !pets.some(pet => pet.id === activePetId)) activePetId = pets[0].id;
+  tabs.innerHTML = `<div class="pet-tab ${activePetId === 'all' ? 'active' : ''}" onclick="selectDashPet('all')">Todos</div>${pets.map(pet => `<div class="pet-tab ${pet.id === activePetId ? 'active' : ''}" onclick="selectDashPet('${pet.id}')">${escapeHtml(pet.name)}</div>`).join('')}`;
   const pet = pets.find(item => item.id === activePetId);
-  document.getElementById('kpi-weight').innerText = pet.weightHistory.at(-1) ? `${pet.weightHistory.at(-1).weight} kg` : '-- kg';
   const range = getWeekDateRange(currentWeekOffset);
-  document.getElementById('kpi-doses').innerText = db.doses.filter(dose => dose.petId === activePetId && dose.scheduledDateTime >= range.startStr && dose.scheduledDateTime <= range.endStr).length;
-  document.getElementById('kpi-meds').innerText = db.treatments.filter(treatment => treatment.petId === activePetId).length;
+  const selectedPetIds = activePetId === 'all' ? new Set(getFamilyPets().map(item => item.id)) : new Set([activePetId]);
+  document.getElementById('kpi-weight').innerText = pet?.weightHistory.at(-1) ? `${pet.weightHistory.at(-1).weight} kg` : '-- kg';
+  document.getElementById('kpi-doses').innerText = db.doses.filter(dose => selectedPetIds.has(dose.petId) && dose.scheduledDateTime >= range.startStr && dose.scheduledDateTime <= range.endStr).length;
+  document.getElementById('kpi-meds').innerText = db.treatments.filter(treatment => selectedPetIds.has(treatment.petId)).length;
   renderWeekGrid(range);
 }
 
@@ -851,11 +891,12 @@ function getWeekDateRange(offset) {
 function renderWeekGrid(range) {
   const names = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const today = toLocalDateString();
+  const selectedPetIds = activePetId === 'all' ? new Set(getFamilyPets().map(pet => pet.id)) : new Set([activePetId]);
   document.getElementById('week-grid').innerHTML = [...Array(7)].map((_, index) => {
     const date = new Date(range.startDate);
     date.setDate(date.getDate() + index);
     const dateString = toLocalDateString(date);
-    const dots = db.doses.filter(dose => dose.petId === activePetId && dose.scheduledDateTime.startsWith(dateString)).map(dose => dose.status === 'done' ? '<span class="dose-dot" style="color:var(--success-badge)">✓</span>' : dose.status === 'late' ? '<span class="dose-dot" style="color:var(--danger-badge)">!</span>' : dose.status === 'skipped' ? '<span class="dose-dot" style="color:var(--danger-badge)">✕</span>' : '<span class="dose-dot" style="color:var(--text-muted)">○</span>').join('') || '<span style="color:var(--text-muted);font-size:0.7rem">-</span>';
+    const dots = db.doses.filter(dose => selectedPetIds.has(dose.petId) && dose.scheduledDateTime.startsWith(dateString)).map(dose => dose.status === 'done' ? '<span class="dose-dot" style="color:var(--success-badge)">✓</span>' : dose.status === 'late' ? '<span class="dose-dot" style="color:var(--danger-badge)">!</span>' : dose.status === 'skipped' ? '<span class="dose-dot" style="color:var(--danger-badge)">✕</span>' : '<span class="dose-dot" style="color:var(--text-muted)">○</span>').join('') || '<span style="color:var(--text-muted);font-size:0.7rem">-</span>';
     return `<button type="button" class="day-col ${dateString === today ? 'today' : ''}" onclick="openDayDetails('${dateString}')" aria-label="Ver detalhes de ${names[index]} ${date.getDate()}"><div>${names[index]}</div><div style="font-size:0.7rem;color:var(--text-muted)">${date.getDate()}</div>${dots}</button>`;
   }).join('');
   document.getElementById('week-label').innerText = currentWeekOffset === 0 ? 'Semana Atual' : `${currentWeekOffset > 0 ? '+' : ''}${currentWeekOffset} Semana(s)`;
@@ -878,7 +919,8 @@ function renderDayDetails() {
   if (!activeDayDetailsDate) return;
   const list = document.getElementById('day-details-list');
   const isViewer = getUserRole() === 'visualizador';
-  const doses = db.doses.filter(dose => dose.petId === activePetId && dose.scheduledDateTime.startsWith(activeDayDetailsDate)).sort((left, right) => left.scheduledDateTime.localeCompare(right.scheduledDateTime));
+  const selectedPetIds = activePetId === 'all' ? new Set(getFamilyPets().map(pet => pet.id)) : new Set([activePetId]);
+  const doses = db.doses.filter(dose => selectedPetIds.has(dose.petId) && dose.scheduledDateTime.startsWith(activeDayDetailsDate)).sort((left, right) => left.scheduledDateTime.localeCompare(right.scheduledDateTime));
   document.getElementById('day-details-title').innerText = `Detalhes de ${formatDate(activeDayDetailsDate)}`;
   list.innerHTML = doses.length ? doses.map(dose => renderDoseCard(dose, isViewer)).join('') : '<div class="card"><p style="color:var(--text-muted)">Nenhuma dose agendada para este dia.</p></div>';
 }

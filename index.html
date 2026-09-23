@@ -408,6 +408,23 @@
   </div>
 </div>
 
+<!-- MODAL DE CONFIRMAÇÃO DA ADMINISTRAÇÃO -->
+<div id="dose-confirm-modal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <h3>Confirmar administração</h3>
+    <form onsubmit="confirmDoseNow(event)">
+      <div class="form-group">
+        <label>Data e horário em que o medicamento foi administrado</label>
+        <input type="datetime-local" id="dose-confirm-actual-at" class="form-control" required>
+      </div>
+      <div class="btn-group">
+        <button type="submit" class="btn">Confirmar</button>
+        <button type="button" class="btn btn-secondary" onclick="closeDoseConfirmation()">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- MODAL DE EDIÇÃO DE DOSE -->
 <div id="dose-edit-modal" class="modal-overlay" style="display: none;">
   <div class="modal-content">
