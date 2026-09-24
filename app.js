@@ -870,7 +870,11 @@ function renderDashboard() {
   const pet = pets.find(item => item.id === activePetId);
   const range = getWeekDateRange(currentWeekOffset);
   const selectedPetIds = activePetId === 'all' ? new Set(getFamilyPets().map(item => item.id)) : new Set([activePetId]);
-  document.getElementById('kpi-weight').innerText = pet?.weightHistory.at(-1) ? `${pet.weightHistory.at(-1).weight} kg` : '-- kg';
+  const weight = activePetId === 'all'
+    ? pets.reduce((total, currentPet) => total + (Number(currentPet.weightHistory.at(-1)?.weight) || 0), 0)
+    : pet?.weightHistory.at(-1)?.weight;
+  const hasWeight = activePetId === 'all' ? pets.some(currentPet => currentPet.weightHistory.at(-1)) : weight !== undefined;
+  document.getElementById('kpi-weight').innerText = hasWeight ? `${weight} kg` : '-- kg';
   document.getElementById('kpi-doses').innerText = db.doses.filter(dose => selectedPetIds.has(dose.petId) && dose.scheduledDateTime >= range.startStr && dose.scheduledDateTime <= range.endStr).length;
   document.getElementById('kpi-meds').innerText = db.treatments.filter(treatment => selectedPetIds.has(treatment.petId)).length;
   renderWeekGrid(range);

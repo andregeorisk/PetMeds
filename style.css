@@ -285,6 +285,8 @@
       padding: 16px;
     }
 
+    #dose-confirm-modal { z-index: 1100; }
+
     .modal-content {
       background: var(--bg-card);
       border-radius: var(--radius);
