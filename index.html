@@ -136,6 +136,9 @@
           <select id="dose-history-member" class="form-control" onchange="renderDoseAdministrationHistory()"></select>
         </div>
         <div id="dose-administration-history"></div>
+        <h3 style="margin-top:18px">Doses de Hoje</h3>
+        <div id="delay-suggestion-banner" class="banner" style="display: none;"></div>
+        <div id="today-doses-list"></div>
       </section>
 
       <!-- 2. PETS -->
@@ -298,16 +301,12 @@
           </form>
         </div>
         <h3>Tratamentos cadastrados</h3>
-        <div class="treatment-tabs" role="tablist" aria-label="Filtrar tratamentos">
-          <button type="button" class="treatment-tab active" data-treatment-tab="active" role="tab" aria-selected="true" onclick="selectTreatmentTab('active')">Ativos</button>
-          <button type="button" class="treatment-tab" data-treatment-tab="paused" role="tab" aria-selected="false" onclick="selectTreatmentTab('paused')">Pausados</button>
-          <button type="button" class="treatment-tab" data-treatment-tab="completed" role="tab" aria-selected="false" onclick="selectTreatmentTab('completed')">Concluídos</button>
+        <div id="treatment-tabs" class="treatment-tabs" role="tablist" aria-label="Filtrar tratamentos">
+          <button type="button" class="treatment-tab active" data-treatment-tab="active" role="tab" aria-selected="true">Ativos</button>
+          <button type="button" class="treatment-tab" data-treatment-tab="paused" role="tab" aria-selected="false">Pausados</button>
+          <button type="button" class="treatment-tab" data-treatment-tab="completed" role="tab" aria-selected="false">Concluídos</button>
         </div>
         <div id="treatments-list"></div>
-
-        <h3>Doses de Hoje</h3>
-        <div id="delay-suggestion-banner" class="banner" style="display: none;"></div>
-        <div id="today-doses-list"></div>
       </section>
 
       <!-- 5. CONFIGURAÇÕES & FAMÍLIA -->

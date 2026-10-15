@@ -630,6 +630,10 @@ function renderTreatments() {
   const list = document.getElementById('treatments-list');
   const isViewer = getUserRole() === 'visualizador';
   const treatments = db.treatments.filter(treatment => treatment.familyId === currentFamily?.id);
+  document.getElementById('treatment-tabs').onclick = event => {
+    const button = event.target.closest('[data-treatment-tab]');
+    if (button) selectTreatmentTab(button.dataset.treatmentTab);
+  };
   document.querySelectorAll('.treatment-tab').forEach(button => {
     button.classList.toggle('active', button.dataset.treatmentTab === activeTreatmentTab);
     button.setAttribute('aria-selected', String(button.dataset.treatmentTab === activeTreatmentTab));
@@ -842,11 +846,13 @@ async function generateScheduledDoses() {
 }
 
 function renderAdmin() {
-  const isViewer = getUserRole() === 'visualizador';
   document.getElementById('treat-pet').innerHTML = getFamilyPets().map(pet => `<option value="${pet.id}">${escapeHtml(pet.name)}</option>`).join('');
   document.getElementById('treat-med').innerHTML = getFamilyMeds().map(med => `<option value="${med.id}">${escapeHtml(med.name)} (${escapeHtml(med.unit)})</option>`).join('');
   renderTreatments();
-  renderDoseAdministrationHistory();
+}
+
+function renderTodayDoses() {
+  const isViewer = getUserRole() === 'visualizador';
   const todayDoses = db.doses.filter(dose => dose.scheduledDateTime.startsWith(toLocalDateString())).sort((left, right) => left.scheduledDateTime.localeCompare(right.scheduledDateTime));
   const list = document.getElementById('today-doses-list');
   if (!todayDoses.length) {
@@ -1048,6 +1054,7 @@ function isTreatmentVisibleInDashboard(treatmentId) {
 
 function renderDashboard() {
   renderDoseAdministrationHistory();
+  renderTodayDoses();
   const pets = getActiveFamilyPets();
   const tabs = document.getElementById('dash-pet-tabs');
   if (!pets.length) {

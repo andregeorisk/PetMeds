@@ -193,8 +193,8 @@
     }
     .pet-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-    .treatment-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; }
-    .treatment-tab { flex: 1; min-width: max-content; padding: 10px 12px; background: transparent; color: var(--text-muted); border: 0; border-bottom: 2px solid transparent; font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .treatment-tabs { display: flex; width: 100%; gap: 0; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; }
+    .treatment-tab { flex: 1 1 0; width: 33.333%; min-width: 0; padding: 12px 4px; background: transparent; color: var(--text-muted); border: 0; border-bottom: 3px solid transparent; font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
     .treatment-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
     .treatment-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 
