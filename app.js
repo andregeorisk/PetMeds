@@ -718,6 +718,7 @@ function renderAdmin() {
   document.getElementById('treat-pet').innerHTML = getFamilyPets().map(pet => `<option value="${pet.id}">${escapeHtml(pet.name)}</option>`).join('');
   document.getElementById('treat-med').innerHTML = getFamilyMeds().map(med => `<option value="${med.id}">${escapeHtml(med.name)} (${escapeHtml(med.unit)})</option>`).join('');
   renderTreatments();
+  renderDoseAdministrationHistory();
   const todayDoses = db.doses.filter(dose => dose.scheduledDateTime.startsWith(toLocalDateString())).sort((left, right) => left.scheduledDateTime.localeCompare(right.scheduledDateTime));
   const list = document.getElementById('today-doses-list');
   if (!todayDoses.length) {
@@ -725,6 +726,32 @@ function renderAdmin() {
     return;
   }
   list.innerHTML = todayDoses.map(dose => renderDoseCard(dose, isViewer)).join('');
+}
+
+function renderDoseAdministrationHistory() {
+  const memberFilter = document.getElementById('dose-history-member');
+  const history = document.getElementById('dose-administration-history');
+  const selectedUserId = memberFilter.value || 'all';
+  memberFilter.innerHTML = '<option value="all">Todas as pessoas</option>' + db.users.map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name)}</option>`).join('');
+  memberFilter.value = selectedUserId === 'all' || db.users.some(user => user.id === selectedUserId) ? selectedUserId : 'all';
+
+  const doses = db.doses
+    .filter(dose => dose.status === 'done' && dose.administeredById && (memberFilter.value === 'all' || dose.administeredById === memberFilter.value))
+    .sort((left, right) => new Date(right.actualDateTime) - new Date(left.actualDateTime));
+  if (!doses.length) {
+    history.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhuma administração registrada para esta pessoa.</p></div>';
+    return;
+  }
+
+  history.innerHTML = doses.map(dose => {
+    const pet = db.pets.find(item => item.id === dose.petId);
+    const medication = db.medications.find(item => item.id === dose.medId);
+    const member = db.users.find(item => item.id === dose.administeredById);
+    const actualAt = new Date(dose.actualDateTime);
+    const date = formatDate(toLocalDateString(actualAt));
+    const time = toLocalDateTimeString(actualAt).substring(11, 16);
+    return `<div class="card"><h4>${escapeHtml(medication?.name || 'Medicamento')}</h4><p style="font-size:0.85rem;color:var(--text-muted)">Pet: <strong>${escapeHtml(pet?.name || 'Pet')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Administrado por: <strong>${escapeHtml(member?.name || 'Membro')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Data e horário: <strong>${date} às ${time}</strong></p></div>`;
+  }).join('');
 }
 
 function renderDoseActions(dose, isViewer) {

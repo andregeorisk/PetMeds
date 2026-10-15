@@ -297,6 +297,13 @@
         <h3>Doses de Hoje</h3>
         <div id="delay-suggestion-banner" class="banner" style="display: none;"></div>
         <div id="today-doses-list"></div>
+
+        <h3>Histórico de administrações</h3>
+        <div class="form-group">
+          <label for="dose-history-member">Filtrar por pessoa</label>
+          <select id="dose-history-member" class="form-control" onchange="renderDoseAdministrationHistory()"></select>
+        </div>
+        <div id="dose-administration-history"></div>
       </section>
 
       <!-- 5. CONFIGURAÇÕES & FAMÍLIA -->
