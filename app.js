@@ -129,7 +129,7 @@ async function loadRemoteData() {
   db.families = [currentFamily];
   db.pets = pets.map(pet => ({ ...pet, status: pet.status || 'active', familyId: pet.family_id, birth: pet.birth_date, weightHistory: weightsByPet.get(pet.id) || [] }));
   db.medications = medications.map(med => ({ ...med, familyId: med.family_id, qty: Number(med.quantity), buyDate: med.bought_at, expDate: med.expires_at }));
-  db.treatments = treatments.map(treatment => ({ ...treatment, familyId: treatment.family_id, petId: treatment.pet_id, medId: treatment.medication_id, intervalDays: treatment.interval_days, intervalValue: treatment.interval_value || treatment.interval_days || 1, intervalUnit: treatment.interval_unit || 'day', startDate: treatment.start_date || treatment.created_at.substring(0, 10), scheduleMode: treatment.schedule_mode || 'exact', toleranceMinutes: treatment.tolerance_minutes || 0, durationType: treatment.duration_type, endDate: treatment.end_date, createdAt: treatment.created_at, times: treatment.times.map(time => time.substring(0, 5)) }));
+  db.treatments = treatments.map(treatment => ({ ...treatment, familyId: treatment.family_id, petId: treatment.pet_id, medId: treatment.medication_id, intervalDays: treatment.interval_days, intervalValue: treatment.interval_value || treatment.interval_days || 1, intervalUnit: treatment.interval_unit || 'day', startDate: treatment.start_date || treatment.created_at.substring(0, 10), scheduleMode: treatment.schedule_mode || 'exact', toleranceMinutes: treatment.tolerance_minutes || 0, durationType: treatment.duration_type, endDate: treatment.end_date, pausedAt: treatment.paused_at, finishedAt: treatment.finished_at, pauseHistory: Array.isArray(treatment.pause_history) ? treatment.pause_history : [], createdAt: treatment.created_at, times: treatment.times.map(time => time.substring(0, 5)) }));
   db.doses = doses.map(dose => ({ ...dose, familyId: dose.family_id, treatmentId: dose.treatment_id, petId: dose.pet_id, medId: dose.medication_id, administeredById: dose.administered_by, scheduledDateTime: `${toLocalDateTimeString(new Date(dose.scheduled_at))}:00`, actualDateTime: dose.actual_at, notified: dose.notified }));
 }
 
@@ -635,10 +635,108 @@ function renderTreatments() {
     const medication = db.medications.find(item => item.id === treatment.medId);
     const unitLabels = { day: 'dia(s)', week: 'semana(s)', month: 'mês(es)', year: 'ano(s)' };
     const duration = treatment.durationType === 'until_date' ? `Até ${formatDate(treatment.endDate)}` : 'Indefinido';
-    const actions = !isViewer ? `<div class="btn-group"><button class="btn btn-secondary btn-sm" onclick="editTreatment('${treatment.id}')">Editar</button><button class="btn btn-danger btn-sm" onclick="deleteTreatment('${treatment.id}')">Excluir</button></div>` : '';
+    const administeredCount = db.doses.filter(dose => dose.treatmentId === treatment.id && dose.status === 'done').length;
+    const plannedCount = getTreatmentPlannedDoseCount(treatment);
+    const doseCount = plannedCount === null ? `Administradas: ${administeredCount}` : `Planejadas: ${plannedCount} | Administradas: ${administeredCount}`;
+    const finishedDate = treatment.finishedAt ? toLocalDateString(new Date(treatment.finishedAt)) : treatment.endDate;
+    const status = isTreatmentFinished(treatment) ? `<span class="badge badge-warning">Encerrado em ${formatDate(finishedDate)}</span>` : treatment.pausedAt ? `<span class="badge badge-warning">Pausado desde ${formatDate(toLocalDateString(new Date(treatment.pausedAt)))}</span>` : '';
+    const pauseHistory = treatment.pauseHistory.map(period => {
+      const startedAt = new Date(period.paused_at);
+      const endedAt = period.resumed_at ? new Date(period.resumed_at) : null;
+      const endLabel = endedAt ? formatDateTime(endedAt) : 'em andamento';
+      const durationLabel = formatPauseDuration(startedAt, endedAt || new Date());
+      return `<p style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">Pausa: ${formatDateTime(startedAt)} até ${endLabel} (${durationLabel})</p>`;
+    }).join('');
+    const statusActions = isTreatmentFinished(treatment) ? '' : treatment.pausedAt
+      ? `<button class="btn btn-sm" onclick="resumeTreatment('${treatment.id}')">Retomar</button><button class="btn btn-danger btn-sm" onclick="finishTreatment('${treatment.id}')">Encerrar agora</button>`
+      : `<button class="btn btn-secondary btn-sm" onclick="pauseTreatment('${treatment.id}')">Pausar</button><button class="btn btn-danger btn-sm" onclick="finishTreatment('${treatment.id}')">Encerrar agora</button>`;
+    const actions = !isViewer ? `<div class="btn-group" style="flex-wrap:wrap">${statusActions}<button class="btn btn-secondary btn-sm" onclick="editTreatment('${treatment.id}')">Editar</button><button class="btn btn-danger btn-sm" onclick="deleteTreatment('${treatment.id}')">Excluir</button></div>` : '';
     const scheduleLabels = { exact: `Horários: ${treatment.times.map(escapeHtml).join(', ')}`, window: `Horários: ${treatment.times.map(escapeHtml).join(', ')} (±${treatment.toleranceMinutes} min)`, all_day: 'Dia inteiro' };
-    return `<div class="card"><h3>${escapeHtml(pet?.name || 'Pet')} - ${escapeHtml(medication?.name || 'Medicamento')}</h3><p style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(treatment.dosage)} | ${scheduleLabels[treatment.scheduleMode] || scheduleLabels.exact} | A cada ${treatment.intervalValue} ${unitLabels[treatment.intervalUnit] || 'dia(s)'}</p><p style="font-size:0.85rem;margin-top:4px">Início: ${formatDate(treatment.startDate)} | Duração: ${duration}</p>${actions}</div>`;
+    return `<div class="card"><h3>${escapeHtml(pet?.name || 'Pet')} - ${escapeHtml(medication?.name || 'Medicamento')} ${status}</h3><p style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(treatment.dosage)} | ${scheduleLabels[treatment.scheduleMode] || scheduleLabels.exact} | A cada ${treatment.intervalValue} ${unitLabels[treatment.intervalUnit] || 'dia(s)'}</p><p style="font-size:0.85rem;margin-top:4px">Início: ${formatDate(treatment.startDate)} | Duração: ${duration}</p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">${doseCount}</p>${pauseHistory}${actions}</div>`;
   }).join('');
+}
+
+function isTreatmentFinished(treatment) {
+  return Boolean(treatment.finishedAt || (treatment.endDate && treatment.endDate < toLocalDateString()));
+}
+
+function formatDateTime(date) {
+  return `${formatDate(toLocalDateString(date))} às ${toLocalDateTimeString(date).substring(11, 16)}`;
+}
+
+function formatPauseDuration(start, end) {
+  const totalMinutes = Math.max(0, Math.floor((end - start) / 60000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  return [days ? `${days} dia(s)` : '', hours ? `${hours} h` : '', `${minutes} min`].filter(Boolean).join(' ');
+}
+
+function isDoseWithinTreatmentPause(treatment, scheduledAt) {
+  return treatment.pauseHistory.some(period => {
+    const start = new Date(period.paused_at);
+    const end = period.resumed_at ? new Date(period.resumed_at) : null;
+    return scheduledAt >= start && (!end || scheduledAt < end);
+  });
+}
+
+function getTreatmentPlannedDoseCount(treatment) {
+  if (!treatment.endDate) return null;
+  const endDate = dateFromString(treatment.endDate);
+  let plannedCount = 0;
+  for (let occurrence = 0; occurrence <= 1000; occurrence += 1) {
+    const occurrenceDate = addTreatmentInterval(dateFromString(treatment.startDate), treatment, occurrence);
+    if (occurrenceDate > endDate) break;
+    const date = toLocalDateString(occurrenceDate);
+    for (const time of treatment.times) {
+      const scheduledAt = new Date(`${date}T${time}:00`);
+      if (treatment.finishedAt && scheduledAt > new Date(treatment.finishedAt)) continue;
+      if (!isDoseWithinTreatmentPause(treatment, scheduledAt)) plannedCount += 1;
+    }
+  }
+  return plannedCount;
+}
+
+async function pauseTreatment(id) {
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem pausar tratamentos.');
+  const treatment = db.treatments.find(item => item.id === id);
+  if (!treatment || treatment.pausedAt || isTreatmentFinished(treatment) || !confirm('Pausar este tratamento? As próximas doses pendentes serão removidas do dashboard.')) return;
+  const pausedAt = new Date();
+  const pauseHistory = [...treatment.pauseHistory, { paused_at: pausedAt.toISOString(), resumed_at: null }];
+  try {
+    await request(supabaseClient.from('treatments').update({ paused_at: pausedAt.toISOString(), pause_history: pauseHistory }).eq('id', id));
+    await request(supabaseClient.from('doses').delete().eq('treatment_id', id).in('status', ['pending', 'late']).gte('scheduled_at', pausedAt.toISOString()));
+    await refreshApp();
+  } catch (error) { showError(error, 'Não foi possível pausar o tratamento'); }
+}
+
+async function resumeTreatment(id) {
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem retomar tratamentos.');
+  const treatment = db.treatments.find(item => item.id === id);
+  if (!treatment?.pausedAt || isTreatmentFinished(treatment)) return;
+  const resumedAt = new Date().toISOString();
+  const pauseHistory = [...treatment.pauseHistory];
+  const openPauseIndex = pauseHistory.findLastIndex(period => !period.resumed_at);
+  if (openPauseIndex >= 0) pauseHistory[openPauseIndex] = { ...pauseHistory[openPauseIndex], resumed_at: resumedAt };
+  try {
+    await request(supabaseClient.from('treatments').update({ paused_at: null, pause_history: pauseHistory }).eq('id', id));
+    await refreshApp();
+  } catch (error) { showError(error, 'Não foi possível retomar o tratamento'); }
+}
+
+async function finishTreatment(id) {
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem encerrar tratamentos.');
+  const treatment = db.treatments.find(item => item.id === id);
+  if (!treatment || isTreatmentFinished(treatment) || !confirm('Encerrar este tratamento agora? A data de encerramento será registrada e as próximas doses serão canceladas.')) return;
+  const finishedAt = new Date();
+  const pauseHistory = [...treatment.pauseHistory];
+  const openPauseIndex = pauseHistory.findLastIndex(period => !period.resumed_at);
+  if (openPauseIndex >= 0) pauseHistory[openPauseIndex] = { ...pauseHistory[openPauseIndex], resumed_at: finishedAt.toISOString() };
+  try {
+    await request(supabaseClient.from('treatments').update({ finished_at: finishedAt.toISOString(), paused_at: null, pause_history: pauseHistory }).eq('id', id));
+    await request(supabaseClient.from('doses').delete().eq('treatment_id', id).in('status', ['pending', 'late']).gte('scheduled_at', finishedAt.toISOString()));
+    await refreshApp();
+  } catch (error) { showError(error, 'Não foi possível encerrar o tratamento'); }
 }
 
 function dateFromString(dateString) {
@@ -688,13 +786,16 @@ async function generateScheduledDoses() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   for (const treatment of db.treatments) {
+    if (treatment.pausedAt || treatment.finishedAt) continue;
     for (let index = 0; index < 30; index += 1) {
       const targetDate = new Date(today);
       targetDate.setDate(today.getDate() + index);
       const date = toLocalDateString(targetDate);
       if (!isTreatmentDateDue(treatment, targetDate) || (treatment.endDate && date > treatment.endDate)) continue;
       treatment.times.forEach(time => {
-        const scheduledAt = new Date(`${date}T${time}:00`).toISOString();
+        const scheduledDateTime = new Date(`${date}T${time}:00`);
+        if (isDoseWithinTreatmentPause(treatment, scheduledDateTime)) return;
+        const scheduledAt = scheduledDateTime.toISOString();
         if (!db.doses.some(dose => dose.treatmentId === treatment.id && dose.scheduledDateTime.startsWith(`${date}T${time}`))) {
           missingDoses.push({ family_id: currentFamily.id, treatment_id: treatment.id, pet_id: treatment.petId, medication_id: treatment.medId, scheduled_at: scheduledAt });
         }
@@ -913,6 +1014,11 @@ async function undoDose(doseId) {
   } catch (error) { showError(error, 'Não foi possível desfazer o registro da dose'); }
 }
 
+function isTreatmentVisibleInDashboard(treatmentId) {
+  const treatment = db.treatments.find(item => item.id === treatmentId);
+  return Boolean(treatment && !treatment.pausedAt && !isTreatmentFinished(treatment));
+}
+
 function renderDashboard() {
   const pets = getActiveFamilyPets();
   const tabs = document.getElementById('dash-pet-tabs');
@@ -934,8 +1040,8 @@ function renderDashboard() {
     : pet?.weightHistory.at(-1)?.weight;
   const hasWeight = activePetId === 'all' ? pets.some(currentPet => currentPet.weightHistory.at(-1)) : weight !== undefined;
   document.getElementById('kpi-weight').innerText = hasWeight ? `${weight} kg` : '-- kg';
-  document.getElementById('kpi-doses').innerText = db.doses.filter(dose => selectedPetIds.has(dose.petId) && dose.scheduledDateTime >= range.startStr && dose.scheduledDateTime <= range.endStr).length;
-  document.getElementById('kpi-meds').innerText = db.treatments.filter(treatment => selectedPetIds.has(treatment.petId)).length;
+  document.getElementById('kpi-doses').innerText = db.doses.filter(dose => selectedPetIds.has(dose.petId) && isTreatmentVisibleInDashboard(dose.treatmentId) && dose.scheduledDateTime >= range.startStr && dose.scheduledDateTime <= range.endStr).length;
+  document.getElementById('kpi-meds').innerText = db.treatments.filter(treatment => selectedPetIds.has(treatment.petId) && !treatment.pausedAt && !isTreatmentFinished(treatment)).length;
   renderWeekGrid(range);
 }
 
@@ -959,7 +1065,7 @@ function renderWeekGrid(range) {
     const date = new Date(range.startDate);
     date.setDate(date.getDate() + index);
     const dateString = toLocalDateString(date);
-    const dots = db.doses.filter(dose => selectedPetIds.has(dose.petId) && dose.scheduledDateTime.startsWith(dateString)).map(dose => dose.status === 'done' ? '<span class="dose-dot" style="color:var(--success-badge)">✓</span>' : dose.status === 'late' ? '<span class="dose-dot" style="color:var(--danger-badge)">!</span>' : dose.status === 'skipped' ? '<span class="dose-dot" style="color:var(--danger-badge)">✕</span>' : '<span class="dose-dot" style="color:var(--text-muted)">○</span>').join('') || '<span style="color:var(--text-muted);font-size:0.7rem">-</span>';
+    const dots = db.doses.filter(dose => selectedPetIds.has(dose.petId) && isTreatmentVisibleInDashboard(dose.treatmentId) && dose.scheduledDateTime.startsWith(dateString)).map(dose => dose.status === 'done' ? '<span class="dose-dot" style="color:var(--success-badge)">✓</span>' : dose.status === 'late' ? '<span class="dose-dot" style="color:var(--danger-badge)">!</span>' : dose.status === 'skipped' ? '<span class="dose-dot" style="color:var(--danger-badge)">✕</span>' : '<span class="dose-dot" style="color:var(--text-muted)">○</span>').join('') || '<span style="color:var(--text-muted);font-size:0.7rem">-</span>';
     return `<button type="button" class="day-col ${dateString === today ? 'today' : ''}" onclick="openDayDetails('${dateString}')" aria-label="Ver detalhes de ${names[index]} ${date.getDate()}"><div>${names[index]}</div><div style="font-size:0.7rem;color:var(--text-muted)">${date.getDate()}</div>${dots}</button>`;
   }).join('');
   document.getElementById('week-label').innerText = currentWeekOffset === 0 ? 'Semana Atual' : `${currentWeekOffset > 0 ? '+' : ''}${currentWeekOffset} Semana(s)`;
@@ -983,7 +1089,7 @@ function renderDayDetails() {
   const list = document.getElementById('day-details-list');
   const isViewer = getUserRole() === 'visualizador';
   const selectedPetIds = activePetId === 'all' ? new Set(getFamilyPets().map(pet => pet.id)) : new Set([activePetId]);
-  const doses = db.doses.filter(dose => selectedPetIds.has(dose.petId) && dose.scheduledDateTime.startsWith(activeDayDetailsDate)).sort((left, right) => left.scheduledDateTime.localeCompare(right.scheduledDateTime));
+  const doses = db.doses.filter(dose => selectedPetIds.has(dose.petId) && isTreatmentVisibleInDashboard(dose.treatmentId) && dose.scheduledDateTime.startsWith(activeDayDetailsDate)).sort((left, right) => left.scheduledDateTime.localeCompare(right.scheduledDateTime));
   document.getElementById('day-details-title').innerText = `Detalhes de ${formatDate(activeDayDetailsDate)}`;
   list.innerHTML = doses.length ? doses.map(dose => renderDoseCard(dose, isViewer)).join('') : '<div class="card"><p style="color:var(--text-muted)">Nenhuma dose agendada para este dia.</p></div>';
 }

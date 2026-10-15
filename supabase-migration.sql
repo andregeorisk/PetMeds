@@ -6,6 +6,11 @@ drop policy if exists "family admins update family" on public.families;
 alter table public.doses
   add column if not exists administered_by uuid references public.profiles(id) on delete set null;
 
+alter table public.treatments
+  add column if not exists paused_at timestamptz,
+  add column if not exists finished_at timestamptz,
+  add column if not exists pause_history jsonb not null default '[]'::jsonb;
+
 create policy "shared family profiles"
 on public.profiles for select
 to authenticated
