@@ -193,10 +193,8 @@
     }
     .pet-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-    .treatment-tabs { display: flex; width: 100%; gap: 0; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; }
-    .treatment-tab { flex: 1 1 0; width: 33.333%; min-width: 0; padding: 12px 4px; background: transparent; color: var(--text-muted); border: 0; border-bottom: 3px solid transparent; font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
-    .treatment-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .treatment-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+    .treatment-tab { font: inherit; flex: 0 0 auto; }
+    .treatment-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
     .kpi-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
     .kpi-card { background: var(--bg-card); padding: 12px 8px; border-radius: var(--radius-sm); text-align: center; border: 1px solid var(--border-color); }

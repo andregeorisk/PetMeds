@@ -144,7 +144,9 @@
       <!-- 2. PETS -->
       <section id="page-pets" class="page">
         <h2>Meus Pets</h2>
-        <div class="card">
+        <button type="button" id="add-pet-button" class="btn" style="margin-bottom:16px" onclick="openPetForm()">Cadastrar Pet</button>
+        <div id="pet-modal" class="modal-overlay" style="display:none">
+          <div class="modal-content">
           <h3 id="pet-form-title">Cadastrar Novo Pet</h3>
           <form id="form-pet" onsubmit="savePet(event)">
             <input type="hidden" id="pet-id">
@@ -179,6 +181,7 @@
               <button type="button" class="btn btn-secondary" onclick="resetPetForm()">Cancelar</button>
             </div>
           </form>
+          </div>
         </div>
         <div id="pets-list"></div>
       </section>
@@ -186,7 +189,9 @@
       <!-- 3. REMÉDIOS -->
       <section id="page-remedios" class="page">
         <h2>Medicamentos</h2>
-        <div class="card">
+        <button type="button" id="add-med-button" class="btn" style="margin-bottom:16px" onclick="openMedicationForm()">Cadastrar Medicamento</button>
+        <div id="med-modal" class="modal-overlay" style="display:none">
+          <div class="modal-content">
           <h3 id="med-form-title">Cadastrar Remédio</h3>
           <form id="form-med" onsubmit="saveMedication(event)">
             <input type="hidden" id="med-id">
@@ -225,6 +230,7 @@
               <button type="button" class="btn btn-secondary" onclick="resetMedForm()">Cancelar</button>
             </div>
           </form>
+          </div>
         </div>
         <div id="meds-list"></div>
       </section>
@@ -232,7 +238,9 @@
       <!-- 4. TRATAMENTO -->
       <section id="page-admin" class="page">
         <h2>Tratamento</h2>
-        <div class="card">
+        <button type="button" id="add-treatment-button" class="btn" style="margin-bottom:16px" onclick="openTreatmentForm()">Novo Tratamento</button>
+        <div id="treatment-modal" class="modal-overlay" style="display:none">
+          <div class="modal-content">
           <h3 id="treat-form-title">Novo Tratamento</h3>
           <form id="form-treatment" onsubmit="saveTreatment(event)">
             <input type="hidden" id="treat-id">
@@ -299,12 +307,14 @@
               <button type="button" class="btn btn-secondary" onclick="resetTreatmentForm()">Cancelar</button>
             </div>
           </form>
+          </div>
         </div>
         <h3>Tratamentos cadastrados</h3>
-        <div id="treatment-tabs" class="treatment-tabs" role="tablist" aria-label="Filtrar tratamentos">
-          <button type="button" class="treatment-tab active" data-treatment-tab="active" role="tab" aria-selected="true">Ativos</button>
-          <button type="button" class="treatment-tab" data-treatment-tab="paused" role="tab" aria-selected="false">Pausados</button>
-          <button type="button" class="treatment-tab" data-treatment-tab="completed" role="tab" aria-selected="false">Concluídos</button>
+        <div id="treatment-tabs" class="pet-tabs" role="tablist" aria-label="Filtrar tratamentos">
+          <button type="button" class="pet-tab treatment-tab" data-treatment-tab="all" role="tab" aria-selected="false">Todos</button>
+          <button type="button" class="pet-tab treatment-tab active" data-treatment-tab="active" role="tab" aria-selected="true">Ativos</button>
+          <button type="button" class="pet-tab treatment-tab" data-treatment-tab="paused" role="tab" aria-selected="false">Pausados</button>
+          <button type="button" class="pet-tab treatment-tab" data-treatment-tab="completed" role="tab" aria-selected="false">Concluídos</button>
         </div>
         <div id="treatments-list"></div>
       </section>

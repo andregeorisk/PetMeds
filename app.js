@@ -3,7 +3,7 @@ const supabaseClient = window.supabaseClient;
 let db = { users: [], families: [], pets: [], medications: [], treatments: [], doses: [] };
 let currentUser = null;
 let currentFamily = null;
-let activePetId = null;
+let activePetId = 'all';
 let currentWeekOffset = 0;
 let activeTreatmentTab = 'active';
 let pendingDelaySuggestion = null;
@@ -183,6 +183,7 @@ async function handleAuthSubmit(event) {
   try {
     if (authMode === 'login') {
       await request(supabaseClient.auth.signInWithPassword({ email, password }));
+      activePetId = 'all';
       await refreshApp();
       return;
     }
@@ -195,6 +196,7 @@ async function handleAuthSubmit(event) {
       showAlertModal('Confirme seu e-mail', 'Enviamos um link de confirmação para seu e-mail. Depois de confirmar, entre com sua senha.');
       return;
     }
+    activePetId = 'all';
     await refreshApp();
   } catch (error) {
     showError(error, 'Falha na autenticação');
@@ -316,6 +318,12 @@ async function savePet(event) {
   } catch (error) { showError(error, 'Não foi possível salvar o pet'); }
 }
 
+function openPetForm() {
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem cadastrar pets.');
+  resetPetForm();
+  document.getElementById('pet-modal').style.display = 'flex';
+}
+
 function editPet(id) {
   const pet = db.pets.find(item => item.id === id);
   if (!pet) return;
@@ -327,6 +335,7 @@ function editPet(id) {
   document.getElementById('pet-status').disabled = pet.status === 'deceased';
   document.getElementById('pet-status-help').innerText = pet.status === 'deceased' ? 'Pets falecidos não podem ser reativados.' : 'Pets doados ou perdidos podem voltar para Ativo.';
   document.getElementById('pet-form-title').innerText = 'Editar Pet';
+  document.getElementById('pet-modal').style.display = 'flex';
 }
 
 function resetPetForm() {
@@ -335,6 +344,7 @@ function resetPetForm() {
   document.getElementById('pet-status').disabled = false;
   document.getElementById('pet-status-help').innerText = '';
   document.getElementById('pet-form-title').innerText = 'Cadastrar Novo Pet';
+  document.getElementById('pet-modal').style.display = 'none';
 }
 
 async function deletePet(id) {
@@ -352,6 +362,7 @@ async function deletePet(id) {
 function renderPets() {
   const list = document.getElementById('pets-list');
   const isViewer = getUserRole() === 'visualizador';
+  document.getElementById('add-pet-button').style.display = isViewer ? 'none' : 'block';
   const pets = getFamilyPets();
   if (!pets.length) {
     list.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhum pet cadastrado na família.</p></div>';
@@ -488,6 +499,12 @@ async function saveMedication(event) {
   } catch (error) { showError(error, 'Não foi possível salvar o medicamento'); }
 }
 
+function openMedicationForm() {
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem cadastrar medicamentos.');
+  resetMedForm();
+  document.getElementById('med-modal').style.display = 'flex';
+}
+
 function editMedication(id) {
   const med = db.medications.find(item => item.id === id);
   if (!med) return;
@@ -499,12 +516,14 @@ function editMedication(id) {
   document.getElementById('med-buy-date').value = med.buyDate;
   document.getElementById('med-exp-date').value = med.expDate;
   document.getElementById('med-form-title').innerText = 'Editar Medicamento';
+  document.getElementById('med-modal').style.display = 'flex';
 }
 
 function resetMedForm() {
   document.getElementById('form-med').reset();
   document.getElementById('med-id').value = '';
   document.getElementById('med-form-title').innerText = 'Cadastrar Remédio';
+  document.getElementById('med-modal').style.display = 'none';
 }
 
 function renderMeds() {
@@ -512,6 +531,7 @@ function renderMeds() {
   const today = toLocalDateString();
   const in30Days = toLocalDateString(new Date(Date.now() + 30 * 86400000));
   const isViewer = getUserRole() === 'visualizador';
+  document.getElementById('add-med-button').style.display = isViewer ? 'none' : 'block';
   const meds = getFamilyMeds();
   if (!meds.length) {
     list.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhum medicamento cadastrado.</p></div>';
@@ -544,6 +564,12 @@ function toggleScheduleMode(value) {
   document.getElementById('times-container').closest('.form-group').style.display = isAllDay ? 'none' : 'block';
   document.getElementById('group-tolerance').style.display = isWindow ? 'block' : 'none';
   document.querySelectorAll('.treat-time').forEach(input => { input.required = !isAllDay; });
+}
+
+function openTreatmentForm() {
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem cadastrar tratamentos.');
+  resetTreatmentForm();
+  document.getElementById('treatment-modal').style.display = 'flex';
 }
 
 async function saveTreatment(event) {
@@ -590,6 +616,7 @@ function resetTreatmentForm() {
   document.getElementById('treat-tolerance-minutes').value = '30';
   toggleEndDate('indefinite');
   toggleScheduleMode('exact');
+  document.getElementById('treatment-modal').style.display = 'none';
 }
 
 function editTreatment(id) {
@@ -611,7 +638,7 @@ function editTreatment(id) {
   document.getElementById('treat-submit-button').innerText = 'Salvar Alterações';
   toggleEndDate(treatment.durationType);
   toggleScheduleMode(treatment.scheduleMode);
-  document.getElementById('form-treatment').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('treatment-modal').style.display = 'flex';
 }
 
 async function deleteTreatment(id) {
@@ -630,11 +657,8 @@ function renderTreatments() {
   const list = document.getElementById('treatments-list');
   const isViewer = getUserRole() === 'visualizador';
   const treatments = db.treatments.filter(treatment => treatment.familyId === currentFamily?.id);
-  document.getElementById('treatment-tabs').onclick = event => {
-    const button = event.target.closest('[data-treatment-tab]');
-    if (button) selectTreatmentTab(button.dataset.treatmentTab);
-  };
   document.querySelectorAll('.treatment-tab').forEach(button => {
+    button.onclick = () => selectTreatmentTab(button.dataset.treatmentTab);
     button.classList.toggle('active', button.dataset.treatmentTab === activeTreatmentTab);
     button.setAttribute('aria-selected', String(button.dataset.treatmentTab === activeTreatmentTab));
   });
@@ -642,9 +666,9 @@ function renderTreatments() {
     list.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhum tratamento cadastrado.</p></div>';
     return;
   }
-  const visibleTreatments = treatments.filter(treatment => getTreatmentCategory(treatment) === activeTreatmentTab);
+  const visibleTreatments = activeTreatmentTab === 'all' ? treatments : treatments.filter(treatment => getTreatmentCategory(treatment) === activeTreatmentTab);
   if (!visibleTreatments.length) {
-    const emptyMessages = { active: 'Nenhum tratamento ativo.', paused: 'Nenhum tratamento pausado.', completed: 'Nenhum tratamento concluído.' };
+    const emptyMessages = { all: 'Nenhum tratamento cadastrado.', active: 'Nenhum tratamento ativo.', paused: 'Nenhum tratamento pausado.', completed: 'Nenhum tratamento concluído.' };
     list.innerHTML = `<div class="card"><p style="color:var(--text-muted)">${emptyMessages[activeTreatmentTab]}</p></div>`;
     return;
   }
@@ -848,6 +872,7 @@ async function generateScheduledDoses() {
 function renderAdmin() {
   document.getElementById('treat-pet').innerHTML = getFamilyPets().map(pet => `<option value="${pet.id}">${escapeHtml(pet.name)}</option>`).join('');
   document.getElementById('treat-med').innerHTML = getFamilyMeds().map(med => `<option value="${med.id}">${escapeHtml(med.name)} (${escapeHtml(med.unit)})</option>`).join('');
+  document.getElementById('add-treatment-button').style.display = getUserRole() === 'visualizador' ? 'none' : 'block';
   renderTreatments();
 }
 
