@@ -365,8 +365,10 @@ function renderPets() {
 
 function openWeightModal(petId) {
   document.getElementById('weight-pet-id').value = petId;
+  document.getElementById('weight-record-id').value = '';
   document.getElementById('weight-date').value = toLocalDateString();
   document.getElementById('weight-val').value = '';
+  document.getElementById('weight-submit-button').innerText = 'Registrar Peso';
   renderWeightHistory(petId);
   document.getElementById('weight-modal').style.display = 'flex';
   requestAnimationFrame(() => drawWeightChart(petId));
@@ -374,12 +376,26 @@ function openWeightModal(petId) {
 
 function closeWeightModal() { document.getElementById('weight-modal').style.display = 'none'; }
 
+function editWeightRecord(petId, weightId) {
+  const pet = db.pets.find(item => item.id === petId);
+  const weight = pet?.weightHistory.find(item => item.id === weightId);
+  if (!weight) return;
+  document.getElementById('weight-pet-id').value = petId;
+  document.getElementById('weight-record-id').value = weight.id;
+  document.getElementById('weight-date').value = weight.date.substring(0, 10);
+  document.getElementById('weight-val').value = weight.weight;
+  document.getElementById('weight-submit-button').innerText = 'Salvar Alterações';
+}
+
 async function addWeightRecord(event) {
   event.preventDefault();
   if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem alterar peso.');
+  const petId = document.getElementById('weight-pet-id').value;
+  const weightId = document.getElementById('weight-record-id').value;
+  const values = { weight: Number(document.getElementById('weight-val').value), recorded_at: document.getElementById('weight-date').value };
   try {
-    await request(supabaseClient.from('weight_records').insert({ pet_id: document.getElementById('weight-pet-id').value, weight: Number(document.getElementById('weight-val').value), recorded_at: document.getElementById('weight-date').value }));
-    const petId = document.getElementById('weight-pet-id').value;
+    if (weightId) await request(supabaseClient.from('weight_records').update(values).eq('id', weightId));
+    else await request(supabaseClient.from('weight_records').insert({ ...values, pet_id: petId }));
     await refreshApp();
     openWeightModal(petId);
   } catch (error) { showError(error, 'Não foi possível registrar o peso'); }
@@ -395,7 +411,8 @@ function renderWeightHistory(petId) {
     return;
   }
   chart.style.display = 'block';
-  container.innerHTML = '<h4>Registros:</h4>' + pet.weightHistory.map(weight => `<div class="list-item"><span>${formatDate(weight.date)}</span><strong>${weight.weight} kg</strong></div>`).join('');
+  const canEdit = getUserRole() !== 'visualizador';
+  container.innerHTML = '<h4>Registros:</h4>' + pet.weightHistory.map(weight => `<div class="list-item"><span>${formatDate(weight.date)}</span><strong>${weight.weight} kg</strong>${canEdit ? `<button type="button" class="btn btn-secondary btn-sm" onclick="editWeightRecord('${petId}', '${weight.id}')">Editar</button>` : ''}</div>`).join('');
 }
 
 function drawWeightChart(petId) {
