@@ -3,6 +3,9 @@
 drop policy if exists "shared family profiles" on public.profiles;
 drop policy if exists "family admins update family" on public.families;
 
+alter table public.doses
+  add column if not exists administered_by uuid references public.profiles(id) on delete set null;
+
 create policy "shared family profiles"
 on public.profiles for select
 to authenticated

@@ -418,6 +418,10 @@
         <label>Data e horário em que o medicamento foi administrado</label>
         <input type="datetime-local" id="dose-confirm-actual-at" class="form-control" required>
       </div>
+      <div class="form-group">
+        <label>Quem administrou</label>
+        <select id="dose-confirm-administered-by" class="form-control" required></select>
+      </div>
       <div class="btn-group">
         <button type="submit" class="btn">Confirmar</button>
         <button type="button" class="btn btn-secondary" onclick="closeDoseConfirmation()">Cancelar</button>
@@ -443,6 +447,10 @@
       <div class="form-group" id="dose-edit-actual-group">
         <label>Horário da administração</label>
         <input type="datetime-local" id="dose-edit-actual-at" class="form-control">
+      </div>
+      <div class="form-group" id="dose-edit-administered-by-group">
+        <label>Quem administrou</label>
+        <select id="dose-edit-administered-by" class="form-control"></select>
       </div>
       <div class="btn-group">
         <button type="submit" class="btn">Salvar Alterações</button>

@@ -130,7 +130,7 @@ async function loadRemoteData() {
   db.pets = pets.map(pet => ({ ...pet, status: pet.status || 'active', familyId: pet.family_id, birth: pet.birth_date, weightHistory: weightsByPet.get(pet.id) || [] }));
   db.medications = medications.map(med => ({ ...med, familyId: med.family_id, qty: Number(med.quantity), buyDate: med.bought_at, expDate: med.expires_at }));
   db.treatments = treatments.map(treatment => ({ ...treatment, familyId: treatment.family_id, petId: treatment.pet_id, medId: treatment.medication_id, intervalDays: treatment.interval_days, intervalValue: treatment.interval_value || treatment.interval_days || 1, intervalUnit: treatment.interval_unit || 'day', startDate: treatment.start_date || treatment.created_at.substring(0, 10), scheduleMode: treatment.schedule_mode || 'exact', toleranceMinutes: treatment.tolerance_minutes || 0, durationType: treatment.duration_type, endDate: treatment.end_date, createdAt: treatment.created_at, times: treatment.times.map(time => time.substring(0, 5)) }));
-  db.doses = doses.map(dose => ({ ...dose, familyId: dose.family_id, treatmentId: dose.treatment_id, petId: dose.pet_id, medId: dose.medication_id, scheduledDateTime: `${toLocalDateTimeString(new Date(dose.scheduled_at))}:00`, actualDateTime: dose.actual_at, notified: dose.notified }));
+  db.doses = doses.map(dose => ({ ...dose, familyId: dose.family_id, treatmentId: dose.treatment_id, petId: dose.pet_id, medId: dose.medication_id, administeredById: dose.administered_by, scheduledDateTime: `${toLocalDateTimeString(new Date(dose.scheduled_at))}:00`, actualDateTime: dose.actual_at, notified: dose.notified }));
 }
 
 async function refreshApp() {
@@ -737,16 +737,18 @@ function renderDoseCard(dose, isViewer) {
   const pet = db.pets.find(item => item.id === dose.petId);
   const med = db.medications.find(item => item.id === dose.medId);
   const treatment = db.treatments.find(item => item.id === dose.treatmentId);
+  const administeredBy = db.users.find(user => user.id === dose.administeredById);
   const status = dose.status === 'done' ? '<span class="badge badge-success">Administrada</span>' : dose.status === 'late' ? '<span class="badge badge-danger">Atrasada</span>' : dose.status === 'skipped' ? '<span class="badge badge-warning">Não dada</span>' : '<span class="badge" style="background:var(--text-muted)">Pendente</span>';
   const schedule = treatment?.scheduleMode === 'all_day' ? 'Dia inteiro' : `Prevista: ${dose.scheduledDateTime.substring(11, 16)}${treatment?.scheduleMode === 'window' ? ` (±${treatment.toleranceMinutes} min)` : ''}`;
   const actual = dose.actualDateTime ? ` | Realizada: ${toLocalDateTimeString(new Date(dose.actualDateTime)).substring(11, 16)}` : '';
-  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><strong>${schedule} - ${escapeHtml(pet?.name || 'Pet')}</strong>${status}</div><p style="font-size:0.9rem;margin-top:4px">Remédio: <strong>${escapeHtml(med?.name || 'Medicamento')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Dose: ${escapeHtml(treatment?.dosage || 'Não informada')}${actual}</p>${renderDoseActions(dose, isViewer)}</div>`;
+  const administeredByLabel = administeredBy ? `<p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Administrada por: <strong>${escapeHtml(administeredBy.name)}</strong></p>` : '';
+  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><strong>${schedule} - ${escapeHtml(pet?.name || 'Pet')}</strong>${status}</div><p style="font-size:0.9rem;margin-top:4px">Remédio: <strong>${escapeHtml(med?.name || 'Medicamento')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Dose: ${escapeHtml(treatment?.dosage || 'Não informada')}${actual}</p>${administeredByLabel}${renderDoseActions(dose, isViewer)}</div>`;
 }
 
 async function markDose(doseId, action) {
   const dose = db.doses.find(item => item.id === doseId);
   if (!dose) return;
-  if (action === 'now') return openDoseConfirmation(doseId);
+  if (action === 'now' || action === 'late') return openDoseConfirmation(doseId);
   const now = new Date();
   const values = { actual_at: now.toISOString(), status: action === 'skip' ? 'skipped' : 'done' };
   try {
@@ -764,7 +766,14 @@ async function markDose(doseId, action) {
 function openDoseConfirmation(doseId) {
   pendingDoseConfirmationId = doseId;
   document.getElementById('dose-confirm-actual-at').value = toLocalDateTimeString();
+  populateDoseMemberOptions('dose-confirm-administered-by');
   document.getElementById('dose-confirm-modal').style.display = 'flex';
+}
+
+function populateDoseMemberOptions(selectId, selectedUserId = currentUser.id) {
+  const select = document.getElementById(selectId);
+  select.innerHTML = '<option value="">Selecione quem administrou</option>' + db.users.map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name)}</option>`).join('');
+  select.value = db.users.some(user => user.id === selectedUserId) ? selectedUserId : '';
 }
 
 function closeDoseConfirmation() {
@@ -781,11 +790,13 @@ async function confirmDoseNow(event) {
   if (!dose) return closeDoseConfirmation();
   const administeredAt = new Date(actualAt);
   if (Number.isNaN(administeredAt.getTime())) return showAlertModal('Data inválida', 'Informe uma data e horário válidos.');
+  const administeredById = document.getElementById('dose-confirm-administered-by').value;
+  if (!administeredById) return showAlertModal('Responsável necessário', 'Selecione quem administrou o medicamento.');
   closeDoseConfirmation();
   const treatment = db.treatments.find(item => item.id === dose.treatmentId);
   const delayThreshold = treatment?.scheduleMode === 'window' ? treatment.toleranceMinutes : 15;
   try {
-    await request(supabaseClient.from('doses').update({ actual_at: administeredAt.toISOString(), status: 'done' }).eq('id', doseId));
+    await request(supabaseClient.from('doses').update({ actual_at: administeredAt.toISOString(), administered_by: administeredById, status: 'done' }).eq('id', doseId));
     if (administeredAt - new Date(dose.scheduledDateTime) > delayThreshold * 60000) {
       pendingDelaySuggestion = { doseId, treatmentId: dose.treatmentId, oldTime: dose.scheduledDateTime.substring(11, 16), newTime: toLocalDateTimeString(administeredAt).substring(11, 16), actualAt: administeredAt.toISOString() };
       showDelayBanner(pendingDelaySuggestion.oldTime, pendingDelaySuggestion.newTime);
@@ -833,6 +844,7 @@ function openDoseEdit(doseId) {
   if (!dose) return;
   document.getElementById('dose-edit-id').value = dose.id;
   document.getElementById('dose-edit-status').value = dose.status === 'skipped' ? 'skipped' : 'done';
+  populateDoseMemberOptions('dose-edit-administered-by', dose.administeredById || currentUser.id);
   const actualAt = dose.actualDateTime ? new Date(dose.actualDateTime) : new Date(dose.scheduledDateTime);
   document.getElementById('dose-edit-actual-at').value = `${toLocalDateString(actualAt)}T${String(actualAt.getHours()).padStart(2, '0')}:${String(actualAt.getMinutes()).padStart(2, '0')}`;
   toggleDoseActualTime();
@@ -846,6 +858,7 @@ function closeDoseEdit() {
 function toggleDoseActualTime() {
   const status = document.getElementById('dose-edit-status').value;
   document.getElementById('dose-edit-actual-group').style.display = status === 'pending' ? 'none' : 'block';
+  document.getElementById('dose-edit-administered-by-group').style.display = status === 'done' ? 'block' : 'none';
 }
 
 async function saveDoseEdit(event) {
@@ -855,8 +868,10 @@ async function saveDoseEdit(event) {
   const status = document.getElementById('dose-edit-status').value;
   const actualAt = document.getElementById('dose-edit-actual-at').value;
   if (status !== 'pending' && !actualAt) return showAlertModal('Horário necessário', 'Informe quando a dose foi administrada.');
+  const administeredById = document.getElementById('dose-edit-administered-by').value;
+  if (status === 'done' && !administeredById) return showAlertModal('Responsável necessário', 'Selecione quem administrou o medicamento.');
   try {
-    await request(supabaseClient.from('doses').update({ status, actual_at: status === 'pending' ? null : new Date(actualAt).toISOString(), notified: false }).eq('id', doseId));
+    await request(supabaseClient.from('doses').update({ status, actual_at: status === 'pending' ? null : new Date(actualAt).toISOString(), administered_by: status === 'done' ? administeredById : null, notified: false }).eq('id', doseId));
     closeDoseEdit();
     await refreshApp();
   } catch (error) { showError(error, 'Não foi possível editar a dose'); }
