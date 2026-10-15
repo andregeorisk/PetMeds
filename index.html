@@ -130,6 +130,12 @@
           </div>
           <div class="week-grid" id="week-grid"></div>
         </div>
+        <h3 style="margin-top:18px">Histórico de administrações</h3>
+        <div class="form-group">
+          <label for="dose-history-member">Filtrar por pessoa</label>
+          <select id="dose-history-member" class="form-control" onchange="renderDoseAdministrationHistory()"></select>
+        </div>
+        <div id="dose-administration-history"></div>
       </section>
 
       <!-- 2. PETS -->
@@ -220,9 +226,9 @@
         <div id="meds-list"></div>
       </section>
 
-      <!-- 4. ADMINISTRAÇÃO -->
+      <!-- 4. TRATAMENTO -->
       <section id="page-admin" class="page">
-        <h2>Administração de Tratamentos</h2>
+        <h2>Tratamento</h2>
         <div class="card">
           <h3 id="treat-form-title">Novo Tratamento</h3>
           <form id="form-treatment" onsubmit="saveTreatment(event)">
@@ -292,18 +298,16 @@
           </form>
         </div>
         <h3>Tratamentos cadastrados</h3>
+        <div class="treatment-tabs" role="tablist" aria-label="Filtrar tratamentos">
+          <button type="button" class="treatment-tab active" data-treatment-tab="active" role="tab" aria-selected="true" onclick="selectTreatmentTab('active')">Ativos</button>
+          <button type="button" class="treatment-tab" data-treatment-tab="paused" role="tab" aria-selected="false" onclick="selectTreatmentTab('paused')">Pausados</button>
+          <button type="button" class="treatment-tab" data-treatment-tab="completed" role="tab" aria-selected="false" onclick="selectTreatmentTab('completed')">Concluídos</button>
+        </div>
         <div id="treatments-list"></div>
 
         <h3>Doses de Hoje</h3>
         <div id="delay-suggestion-banner" class="banner" style="display: none;"></div>
         <div id="today-doses-list"></div>
-
-        <h3>Histórico de administrações</h3>
-        <div class="form-group">
-          <label for="dose-history-member">Filtrar por pessoa</label>
-          <select id="dose-history-member" class="form-control" onchange="renderDoseAdministrationHistory()"></select>
-        </div>
-        <div id="dose-administration-history"></div>
       </section>
 
       <!-- 5. CONFIGURAÇÕES & FAMÍLIA -->
@@ -385,7 +389,7 @@
       <button class="nav-btn" onclick="switchPage('pets')">🐾<span>Pets</span></button>
       <button class="nav-btn" onclick="switchPage('remedios')">💊<span>Remédios</span></button>
       <button class="nav-btn dash-btn" onclick="switchPage('dashboard')">📊</button>
-      <button class="nav-btn" onclick="switchPage('admin')">📋<span>Admin</span></button>
+      <button class="nav-btn" onclick="switchPage('admin')">📋<span>Tratamento</span></button>
       <button class="nav-btn" onclick="switchPage('config')">⚙️<span>Config</span></button>
     </nav>
   </div>

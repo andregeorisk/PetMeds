@@ -5,6 +5,7 @@ let currentUser = null;
 let currentFamily = null;
 let activePetId = null;
 let currentWeekOffset = 0;
+let activeTreatmentTab = 'active';
 let pendingDelaySuggestion = null;
 let pendingDoseConfirmationId = null;
 let activeDayDetailsDate = null;
@@ -295,7 +296,10 @@ function switchPage(pageId) {
   if (pageId === 'dashboard') renderDashboard();
   if (pageId === 'pets') renderPets();
   if (pageId === 'remedios') renderMeds();
-  if (pageId === 'admin') renderAdmin();
+  if (pageId === 'admin') {
+    activeTreatmentTab = 'active';
+    renderAdmin();
+  }
   if (pageId === 'config') renderConfig();
 }
 
@@ -626,11 +630,21 @@ function renderTreatments() {
   const list = document.getElementById('treatments-list');
   const isViewer = getUserRole() === 'visualizador';
   const treatments = db.treatments.filter(treatment => treatment.familyId === currentFamily?.id);
+  document.querySelectorAll('.treatment-tab').forEach(button => {
+    button.classList.toggle('active', button.dataset.treatmentTab === activeTreatmentTab);
+    button.setAttribute('aria-selected', String(button.dataset.treatmentTab === activeTreatmentTab));
+  });
   if (!treatments.length) {
     list.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhum tratamento cadastrado.</p></div>';
     return;
   }
-  list.innerHTML = treatments.map(treatment => {
+  const visibleTreatments = treatments.filter(treatment => getTreatmentCategory(treatment) === activeTreatmentTab);
+  if (!visibleTreatments.length) {
+    const emptyMessages = { active: 'Nenhum tratamento ativo.', paused: 'Nenhum tratamento pausado.', completed: 'Nenhum tratamento concluído.' };
+    list.innerHTML = `<div class="card"><p style="color:var(--text-muted)">${emptyMessages[activeTreatmentTab]}</p></div>`;
+    return;
+  }
+  list.innerHTML = visibleTreatments.map(treatment => {
     const pet = db.pets.find(item => item.id === treatment.petId);
     const medication = db.medications.find(item => item.id === treatment.medId);
     const unitLabels = { day: 'dia(s)', week: 'semana(s)', month: 'mês(es)', year: 'ano(s)' };
@@ -639,7 +653,10 @@ function renderTreatments() {
     const plannedCount = getTreatmentPlannedDoseCount(treatment);
     const doseCount = plannedCount === null ? `Administradas: ${administeredCount}` : `Planejadas: ${plannedCount} | Administradas: ${administeredCount}`;
     const finishedDate = treatment.finishedAt ? toLocalDateString(new Date(treatment.finishedAt)) : treatment.endDate;
-    const status = isTreatmentFinished(treatment) ? `<span class="badge badge-warning">Encerrado em ${formatDate(finishedDate)}</span>` : treatment.pausedAt ? `<span class="badge badge-warning">Pausado desde ${formatDate(toLocalDateString(new Date(treatment.pausedAt)))}</span>` : '';
+    const finishedEarly = Boolean(treatment.finishedAt && treatment.endDate && finishedDate < treatment.endDate);
+    const status = isTreatmentFinished(treatment)
+      ? `<span class="badge badge-warning">${finishedEarly ? `Encerrado antes do previsto: ${formatDate(finishedDate)} (previsto ${formatDate(treatment.endDate)})` : `Concluído em ${formatDate(finishedDate)}`}</span>`
+      : treatment.pausedAt ? `<span class="badge badge-warning">Pausado desde ${formatDate(toLocalDateString(new Date(treatment.pausedAt)))}</span>` : '';
     const pauseHistory = treatment.pauseHistory.map(period => {
       const startedAt = new Date(period.paused_at);
       const endedAt = period.resumed_at ? new Date(period.resumed_at) : null;
@@ -654,6 +671,16 @@ function renderTreatments() {
     const scheduleLabels = { exact: `Horários: ${treatment.times.map(escapeHtml).join(', ')}`, window: `Horários: ${treatment.times.map(escapeHtml).join(', ')} (±${treatment.toleranceMinutes} min)`, all_day: 'Dia inteiro' };
     return `<div class="card"><h3>${escapeHtml(pet?.name || 'Pet')} - ${escapeHtml(medication?.name || 'Medicamento')} ${status}</h3><p style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(treatment.dosage)} | ${scheduleLabels[treatment.scheduleMode] || scheduleLabels.exact} | A cada ${treatment.intervalValue} ${unitLabels[treatment.intervalUnit] || 'dia(s)'}</p><p style="font-size:0.85rem;margin-top:4px">Início: ${formatDate(treatment.startDate)} | Duração: ${duration}</p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">${doseCount}</p>${pauseHistory}${actions}</div>`;
   }).join('');
+}
+
+function getTreatmentCategory(treatment) {
+  if (treatment.pausedAt && !isTreatmentFinished(treatment)) return 'paused';
+  return isTreatmentFinished(treatment) ? 'completed' : 'active';
+}
+
+function selectTreatmentTab(tab) {
+  activeTreatmentTab = tab;
+  renderTreatments();
 }
 
 function isTreatmentFinished(treatment) {
@@ -1020,6 +1047,7 @@ function isTreatmentVisibleInDashboard(treatmentId) {
 }
 
 function renderDashboard() {
+  renderDoseAdministrationHistory();
   const pets = getActiveFamilyPets();
   const tabs = document.getElementById('dash-pet-tabs');
   if (!pets.length) {
