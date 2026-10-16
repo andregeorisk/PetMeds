@@ -50,6 +50,18 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
 }
 
+const svgIcon = paths => `<svg class="inline-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const UI_ICONS = {
+  scale: svgIcon('<path d="M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0L5 7zM19 7l-3 7a3 3 0 0 0 6 0l-3-7z"/>'),
+  edit: svgIcon('<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>'),
+  trash: svgIcon('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/>'),
+  calendar: svgIcon('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>')
+};
+
+function uiIcon(file, size = 16) {
+  return `<span class="ui-icon" style="--s:${size}px"><img src="${file}" width="${size}" height="${size}" alt=""></span>`;
+}
+
 function showAlertModal(title, message) {
   document.getElementById('alert-title').innerText = title;
   document.getElementById('alert-message').innerText = message;
@@ -453,8 +465,8 @@ function renderPets() {
     const status = pet.status || 'active';
     const statusDate = status === 'donated' ? `<p style="font-size:0.85rem;margin-top:4px">Data da doação: <strong>${pet.donatedAt ? formatDate(pet.donatedAt) : 'Não registrada'}</strong></p>` : status === 'deceased' ? `<p style="font-size:0.85rem;margin-top:4px">Data do falecimento: <strong>${pet.deceasedAt ? formatDate(pet.deceasedAt) : 'Não registrada'}</strong></p>` : '';
     const activeTreatments = db.treatments.filter(treatment => treatment.petId === pet.id && !treatment.pausedAt && !isTreatmentFinished(treatment));
-    const treatmentsHtml = activeTreatments.length ? `<div style="font-size:0.85rem;margin-top:6px"><strong>Tratamentos ativos:</strong>${activeTreatments.map(treatment => `<div>${escapeHtml(treatment.code || '--')} - ${escapeHtml(db.medications.find(med => med.id === treatment.medId)?.name || 'Medicamento')}</div>`).join('')}</div>` : '';
-    return `<div class="card" onclick="openWeightModal('${pet.id}')"><h3>${icon} ${escapeHtml(pet.name)} <span class="badge ${statusClasses[status] || 'badge'}">${statusLabels[status] || 'Ativo'}</span></h3><p style="font-size:0.85rem;color:var(--text-muted)">Espécie: ${escapeHtml(pet.species)} | Nasc.: ${formatDate(pet.birth)}</p>${statusDate}<p class="weight-summary" style="font-size:0.85rem;margin-top:4px"><strong>Peso Atual:</strong> ${lastWeight ? `${lastWeight.weight} kg (${formatDate(lastWeight.date)})` : 'Não registrado'}</p>${treatmentsHtml}<div class="btn-group" onclick="event.stopPropagation()"><button class="btn btn-secondary btn-sm" onclick="openWeightModal('${pet.id}')">Histórico de Peso</button>${!isViewer ? `<button class="btn btn-secondary btn-sm" onclick="editPet('${pet.id}')">Editar</button><button class="btn btn-danger btn-sm" onclick="deletePet('${pet.id}')">Excluir</button>` : ''}</div></div>`;
+    const treatmentsHtml = activeTreatments.length ? `<div class="card-section-label">Tratamentos Ativos:</div><div class="chip-list">${activeTreatments.map(treatment => `<span class="chip">${uiIcon('icone_medicamento_petmeds.svg', 14)}${escapeHtml(treatment.code || '--')} · ${escapeHtml(db.medications.find(med => med.id === treatment.medId)?.name || 'Medicamento')}</span>`).join('')}</div>` : '';
+    return `<div class="card pet-card" onclick="openWeightModal('${pet.id}')"><div class="card-head"><div class="card-avatar">${icon}</div><div class="card-head-text"><span class="badge ${statusClasses[status] || 'badge'}">${statusLabels[status] || 'Ativo'}</span><h3 class="card-title">${escapeHtml(pet.name)}</h3></div></div><p class="card-meta">Espécie: ${escapeHtml(pet.species)} • ${UI_ICONS.calendar} Nasc.: ${formatDate(pet.birth)}</p>${statusDate}<p class="card-weight weight-summary">${UI_ICONS.scale} ${lastWeight ? `Peso: ${lastWeight.weight} kg <small>(${formatDate(lastWeight.date)})</small>` : 'Peso não registrado'}</p>${treatmentsHtml}<div class="card-actions" onclick="event.stopPropagation()"><button class="btn btn-secondary btn-sm" onclick="openWeightModal('${pet.id}')">${UI_ICONS.scale} Histórico de Peso</button>${!isViewer ? `<button class="btn btn-secondary btn-sm" onclick="editPet('${pet.id}')">${UI_ICONS.edit} Editar</button><button class="btn btn-danger btn-sm" onclick="deletePet('${pet.id}')">${UI_ICONS.trash} Excluir</button>` : ''}</div></div>`;
   }).join('');
 }
 
@@ -716,8 +728,8 @@ function renderMeds() {
   list.innerHTML = visibleMeds.map(med => {
     const category = getMedicationStockCategory(med, today);
     const badge = category === 'expired' ? '<span class="badge badge-danger">FORA DA VALIDADE</span>' : med.expDate <= in30Days ? '<span class="badge badge-warning">VENCE EM BREVE</span>' : '';
-    const actions = !isViewer ? `<div class="btn-group" style="margin-top:8px"><button class="btn btn-secondary btn-sm" onclick="editMedication('${med.id}')">Editar</button><button class="btn btn-sm" onclick="openMedicationRestock('${med.id}')">Registrar reposição</button></div>` : '';
-    return `<div class="card"><h3>💊 ${escapeHtml(med.name)} ${badge}</h3><p style="font-size:0.85rem;color:var(--text-muted)">Lab: ${escapeHtml(med.lab)} | Disponível: ${med.qty} ${escapeHtml(med.unit)}${med.packageQty ? ` | Embalagem: ${med.packageQty} ${escapeHtml(med.unit)}` : ''}</p><p style="font-size:0.85rem;margin-top:4px">Validade: <strong>${formatDate(med.expDate)}</strong></p><label style="display:flex;gap:6px;align-items:center;font-size:0.85rem;margin-top:6px"><input type="checkbox" ${med.singleDose ? 'checked' : ''} ${isViewer ? 'disabled' : ''} onchange="toggleMedicationSingleDose('${med.id}', this.checked)"> Disponível para dose única</label>${getMedicationStockHistoryHtml(med)}${actions}</div>`;
+    const actions = !isViewer ? `<div class="card-actions"><button class="btn btn-secondary btn-sm" onclick="editMedication('${med.id}')">${UI_ICONS.edit} Editar</button><button class="btn btn-sm" onclick="openMedicationRestock('${med.id}')">Registrar reposição</button></div>` : '';
+    return `<div class="card med-card"><div class="card-head"><div class="card-avatar">${uiIcon('icone_medicamento_petmeds.svg', 28)}</div><div class="card-head-text">${badge}<h3 class="card-title">${escapeHtml(med.name)}</h3></div></div><p style="font-size:0.85rem;color:var(--text-muted)">Lab: ${escapeHtml(med.lab)} | Disponível: ${med.qty} ${escapeHtml(med.unit)}${med.packageQty ? ` | Embalagem: ${med.packageQty} ${escapeHtml(med.unit)}` : ''}</p><p style="font-size:0.85rem;margin-top:4px">Validade: <strong>${formatDate(med.expDate)}</strong></p><label style="display:flex;gap:6px;align-items:center;font-size:0.85rem;margin-top:6px"><input type="checkbox" ${med.singleDose ? 'checked' : ''} ${isViewer ? 'disabled' : ''} onchange="toggleMedicationSingleDose('${med.id}', this.checked)"> Disponível para dose única</label>${getMedicationStockHistoryHtml(med)}${actions}</div>`;
   }).join('');
 }
 
@@ -893,10 +905,10 @@ function renderTreatments() {
     const statusActions = isTreatmentFinished(treatment) ? '' : treatment.pausedAt
       ? `<button class="btn btn-sm" onclick="resumeTreatment('${treatment.id}')">Retomar</button><button class="btn btn-danger btn-sm" onclick="finishTreatment('${treatment.id}')">Encerrar agora</button>`
       : `<button class="btn btn-secondary btn-sm" onclick="pauseTreatment('${treatment.id}')">Pausar</button><button class="btn btn-danger btn-sm" onclick="finishTreatment('${treatment.id}')">Encerrar agora</button>`;
-    const actions = !isViewer ? `<div class="btn-group" style="flex-wrap:wrap">${statusActions}<button class="btn btn-secondary btn-sm" onclick="editTreatment('${treatment.id}')">Editar</button><button class="btn btn-danger btn-sm" onclick="deleteTreatment('${treatment.id}')">Excluir</button></div>` : '';
+    const actions = !isViewer ? `<div class="card-actions">${statusActions}<button class="btn btn-secondary btn-sm" onclick="editTreatment('${treatment.id}')">${UI_ICONS.edit} Editar</button><button class="btn btn-danger btn-sm" onclick="deleteTreatment('${treatment.id}')">${UI_ICONS.trash} Excluir</button></div>` : '';
     const timeLabels = treatment.times.map(time => `${escapeHtml(time)}${treatment.disabledTimes.includes(time) ? ' (desativado)' : ''}`).join(', ');
     const scheduleLabels = { exact: `Horários: ${timeLabels}`, window: `Horários: ${timeLabels} (±${treatment.toleranceMinutes} min)`, all_day: 'Dia inteiro' };
-    return `<div class="card"><h3>${escapeHtml(pet?.name || 'Pet')} - ${escapeHtml(medication?.name || 'Medicamento')} ${status}</h3><p style="font-size:0.8rem;color:var(--text-muted)">Código: <strong>${escapeHtml(treatment.code || '--')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(treatment.dosage)} | ${scheduleLabels[treatment.scheduleMode] || scheduleLabels.exact} | A cada ${treatment.intervalValue} ${unitLabels[treatment.intervalUnit] || 'dia(s)'}</p><p style="font-size:0.85rem;margin-top:4px">Início: ${formatDate(treatment.startDate)} | Duração: ${duration}</p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">${doseCount}</p>${pauseHistory}${actions}</div>`;
+    return `<div class="card treatment-card"><div class="card-head"><div class="card-avatar">${uiIcon('icone_tratamento_petmeds.svg', 28)}</div><div class="card-head-text">${status}<h3 class="card-title">${escapeHtml(pet?.name || 'Pet')} - ${escapeHtml(medication?.name || 'Medicamento')}</h3></div></div><p style="font-size:0.8rem;color:var(--text-muted)">Código: <strong>${escapeHtml(treatment.code || '--')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(treatment.dosage)} | ${scheduleLabels[treatment.scheduleMode] || scheduleLabels.exact} | A cada ${treatment.intervalValue} ${unitLabels[treatment.intervalUnit] || 'dia(s)'}</p><p style="font-size:0.85rem;margin-top:4px">Início: ${formatDate(treatment.startDate)} | Duração: ${duration}</p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">${doseCount}</p>${pauseHistory}${actions}</div>`;
   }).join('');
 }
 

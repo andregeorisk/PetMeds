@@ -241,6 +241,34 @@
     .week-dose-empty { color: var(--text-muted); font-size: 0.85rem; padding: 12px 4px; border-top: 1px solid var(--border-color); }
     .dose-dot { display: block; font-size: 1rem; margin-top: 4px; }
 
+    /* CARDS (estilo padrão) */
+    .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .card-avatar { width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--primary); background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; }
+    .card-head-text { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+    .card-title { margin: 0; font-size: 1.2rem; font-weight: 700; overflow-wrap: anywhere; }
+    .card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.85rem; color: var(--text-muted); }
+    .card-weight { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 1rem; font-weight: 700; color: var(--primary); }
+    .card-weight small { font-size: 0.8rem; font-weight: 400; color: var(--text-muted); }
+    .card-section-label { margin-top: 10px; font-size: 0.9rem; font-weight: 600; }
+    .chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--primary); color: var(--on-primary); font-size: 0.8rem; font-weight: 600; }
+    .card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .card .btn-sm { display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; }
+    .card .btn-secondary { background: transparent; border: 1px solid var(--border-color); }
+    .card .btn-danger { background: rgba(231,76,60,0.14); color: var(--danger-badge); border: 1px solid rgba(231,76,60,0.45); }
+    .badge { border-radius: 999px; padding: 2px 10px; }
+    .inline-icon { flex-shrink: 0; vertical-align: middle; }
+    .ui-icon { --s: 16px; width: var(--s); height: var(--s); overflow: hidden; display: inline-block; flex-shrink: 0; }
+    .ui-icon img { width: var(--s); height: var(--s); display: block; object-fit: contain; transform: translateX(calc(var(--s) * -1)); filter: drop-shadow(var(--s) 0 0 currentColor); }
+    .card-avatar .ui-icon { color: var(--primary); }
+
+    /* BOT\u00d5ES DE CADASTRO E ABAS SEGMENTADAS */
+    #add-pet-button, #add-med-button, #add-treatment-button { border-radius: 999px; padding: 14px 16px; font-size: 1rem; background: linear-gradient(135deg, var(--primary-hover), var(--primary)); box-shadow: 0 6px 16px var(--primary-light); }
+    #add-pet-button::before, #add-med-button::before, #add-treatment-button::before { content: '+'; font-size: 1.3rem; line-height: 1; margin-right: 8px; }
+    #pet-status-tabs, #medication-stock-tabs, .treatment-tabs { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 999px; padding: 4px; gap: 4px; width: 100%; overflow: hidden; }
+    #pet-status-tabs .pet-tab, #medication-stock-tabs .pet-tab, .treatment-tabs .pet-tab, .treatment-tab { flex: 1 1 0; text-align: center; background: transparent; border-color: transparent; border-radius: 999px; box-shadow: none; }
+    #pet-status-tabs .pet-tab.active, #medication-stock-tabs .pet-tab.active, .treatment-tabs .pet-tab.active, .treatment-tab.active { background: var(--primary-light); color: var(--primary); border-color: transparent; font-weight: 600; }
+
     /* LISTS & BADGES */
     .list-item {
       display: flex;
