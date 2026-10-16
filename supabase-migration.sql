@@ -330,7 +330,7 @@ create trigger doses_sync_stock
 after insert or update of status on public.doses
 for each row execute function public.sync_medication_stock_on_dose();
 
--- Codigo numerico de 8 digitos gerado automaticamente para cada tratamento.
+-- Codigo sequencial (8 digitos com zeros a esquerda) atribuido a cada tratamento na criacao.
 alter table public.treatments
   add column if not exists code text;
 
@@ -338,26 +338,37 @@ create or replace function public.assign_treatment_code()
 returns trigger
 language plpgsql
 as $$
-declare
-  candidate text;
 begin
   if new.code is null then
-    loop
-      candidate := (10000000 + floor(random() * 90000000))::bigint::text;
-      exit when not exists (select 1 from public.treatments where code = candidate);
-    end loop;
-    new.code := candidate;
+    new.code := lpad(nextval('public.treatment_code_seq')::text, 8, '0');
   end if;
   return new;
 end;
 $$;
 
 drop trigger if exists treatments_assign_code on public.treatments;
+
+-- Numera os tratamentos existentes pela data de inicio, uma unica vez (na criacao da sequencia).
+do $$
+begin
+  if to_regclass('public.treatment_code_seq') is null then
+    create sequence public.treatment_code_seq;
+    with ordered as (
+      select id, row_number() over (order by start_date nulls last, created_at, id) as position
+      from public.treatments
+    )
+    update public.treatments t
+    set code = lpad(ordered.position::text, 8, '0')
+    from ordered
+    where t.id = ordered.id;
+    perform setval('public.treatment_code_seq', (select count(*) from public.treatments) + 1, false);
+  end if;
+end;
+$$;
+
 create trigger treatments_assign_code
 before insert or update on public.treatments
 for each row execute function public.assign_treatment_code();
-
-update public.treatments set code = null where code is null;
 
 create unique index if not exists treatments_code_key on public.treatments (code);
 
