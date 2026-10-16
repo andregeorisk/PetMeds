@@ -10,6 +10,7 @@ let currentWeekOffset = 0;
 let activeTreatmentTab = 'active';
 let pendingDoseConfirmationId = null;
 let activeDayDetailsDate = null;
+let selectedWeekDate = null;
 let authMode = 'login';
 let userFamilies = [];
 const ACTIVE_FAMILY_KEY = 'petmeds.activeFamilyId';
@@ -1281,6 +1282,7 @@ function renderDashboard() {
     document.getElementById('kpi-doses').innerText = '0';
     document.getElementById('kpi-meds').innerText = '0';
     document.getElementById('week-grid').innerHTML = '';
+    document.getElementById('week-dose-list').innerHTML = '';
     return;
   }
   if (activePetId !== 'all' && !pets.some(pet => pet.id === activePetId)) activePetId = pets[0].id;
@@ -1310,17 +1312,44 @@ function getWeekDateRange(offset) {
   return { startDate, endDate, startStr: `${toLocalDateString(startDate)}T00:00:00`, endStr: `${toLocalDateString(endDate)}T23:59:59` };
 }
 
+const DOSE_STATUS_ICONS = {
+  done: '<svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="Administrada"><circle cx="12" cy="12" r="11" fill="#2ecc71"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  waiting: '<svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="Aguardando administração"><path d="M6 3h12M6 21h12M7 3v3.5c0 2 2 3.5 5 5.5-3 2-5 3.5-5 5.5V21M17 3v3.5c0 2-2 3.5-5 5.5 3 2 5 3.5 5 5.5V21" fill="rgba(245,166,35,0.25)" stroke="#f5a623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  scheduled: '<svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="Agendada"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+  skipped: '<svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="Não dada"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="#e74c3c" stroke-width="2.8" stroke-linecap="round"/></svg>'
+};
+
+function getDoseStatusIcon(dose) {
+  if (dose.status === 'done') return DOSE_STATUS_ICONS.done;
+  if (dose.status === 'skipped') return DOSE_STATUS_ICONS.skipped;
+  if (dose.status === 'late' || new Date(dose.scheduledDateTime) <= new Date()) return DOSE_STATUS_ICONS.waiting;
+  return DOSE_STATUS_ICONS.scheduled;
+}
+
+function selectWeekDay(dateString) {
+  selectedWeekDate = dateString;
+  renderWeekGrid(getWeekDateRange(currentWeekOffset));
+}
+
 function renderWeekGrid(range) {
   const names = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const today = toLocalDateString();
-  const selectedPetIds = activePetId === 'all' ? new Set(getFamilyPets().map(pet => pet.id)) : new Set([activePetId]);
-  document.getElementById('week-grid').innerHTML = [...Array(7)].map((_, index) => {
+  const weekDates = [...Array(7)].map((_, index) => {
     const date = new Date(range.startDate);
     date.setDate(date.getDate() + index);
-    const dateString = toLocalDateString(date);
-    const dots = db.doses.filter(dose => selectedPetIds.has(dose.petId) && isTreatmentVisibleInDashboard(dose.treatmentId) && dose.scheduledDateTime.startsWith(dateString)).map(dose => dose.status === 'done' ? '<span class="dose-dot" style="color:var(--success-badge)">✓</span>' : dose.status === 'late' ? '<span class="dose-dot" style="color:var(--danger-badge)">!</span>' : dose.status === 'skipped' ? '<span class="dose-dot" style="color:var(--danger-badge)">✕</span>' : '<span class="dose-dot" style="color:var(--text-muted)">○</span>').join('') || '<span style="color:var(--text-muted);font-size:0.7rem">-</span>';
-    return `<button type="button" class="day-col ${dateString === today ? 'today' : ''}" onclick="openDayDetails('${dateString}')" aria-label="Ver detalhes de ${names[index]} ${date.getDate()}"><div>${names[index]}</div><div style="font-size:0.7rem;color:var(--text-muted)">${date.getDate()}</div>${dots}</button>`;
-  }).join('');
+    return { date, dateString: toLocalDateString(date), name: names[index] };
+  });
+  if (!weekDates.some(day => day.dateString === selectedWeekDate)) selectedWeekDate = weekDates.find(day => day.dateString === today)?.dateString || weekDates[0].dateString;
+  const selectedPetIds = activePetId === 'all' ? new Set(getFamilyPets().map(pet => pet.id)) : new Set([activePetId]);
+  document.getElementById('week-grid').innerHTML = weekDates.map(day => `<button type="button" class="day-col ${day.dateString === today ? 'today' : ''} ${day.dateString === selectedWeekDate ? 'selected' : ''}" onclick="selectWeekDay('${day.dateString}')" aria-pressed="${day.dateString === selectedWeekDate}" aria-label="${day.name} ${day.date.getDate()}"><span>${day.name}</span><strong>${day.date.getDate()}</strong></button>`).join('');
+  const doses = db.doses.filter(dose => selectedPetIds.has(dose.petId) && isTreatmentVisibleInDashboard(dose.treatmentId) && dose.scheduledDateTime.startsWith(selectedWeekDate)).sort((left, right) => left.scheduledDateTime.localeCompare(right.scheduledDateTime));
+  document.getElementById('week-dose-list').innerHTML = doses.length ? doses.map(dose => {
+    const medication = db.medications.find(item => item.id === dose.medId);
+    const pet = db.pets.find(item => item.id === dose.petId);
+    const treatment = db.treatments.find(item => item.id === dose.treatmentId);
+    const time = treatment?.scheduleMode === 'all_day' ? 'Dia todo' : dose.scheduledDateTime.substring(11, 16);
+    return `<div class="week-dose-row" role="button" tabindex="0" onclick="openDayDetails('${selectedWeekDate}')" onkeydown="if (event.key === 'Enter') openDayDetails('${selectedWeekDate}')"><div><strong>${time}</strong> - ${escapeHtml(medication?.name || 'Medicamento')}<div class="week-dose-pet">${escapeHtml(pet?.name || 'Pet')}</div></div><span class="dose-status">${getDoseStatusIcon(dose)}</span></div>`;
+  }).join('') : '<p class="week-dose-empty">Nenhuma dose agendada para este dia.</p>';
   document.getElementById('week-label').innerText = currentWeekOffset === 0 ? 'Semana Atual' : `${currentWeekOffset > 0 ? '+' : ''}${currentWeekOffset} Semana(s)`;
   if (activeDayDetailsDate && document.getElementById('day-details-modal').style.display === 'flex') renderDayDetails();
 }

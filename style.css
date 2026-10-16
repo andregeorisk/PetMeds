@@ -227,10 +227,18 @@
     body.restricted-caregiver #page-pets > *, body.restricted-caregiver #page-remedios > *, body.restricted-caregiver #page-admin > *, body.access-blocked #page-dashboard > *, body.access-blocked #page-pets > *, body.access-blocked #page-remedios > *, body.access-blocked #page-admin > * { display: none !important; }
     body.restricted-caregiver #page-pets::after, body.restricted-caregiver #page-remedios::after, body.restricted-caregiver #page-admin::after, body.access-blocked #page-dashboard::after, body.access-blocked #page-pets::after, body.access-blocked #page-remedios::after, body.access-blocked #page-admin::after { content: 'Nenhum conteúdo disponível para o seu acesso.'; color: var(--text-muted); display: block; padding: 16px 0; }
     .dashboard-week-card { min-height: 180px; height: auto; margin-bottom: 0; display: flex; flex-direction: column; }
-    .week-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; flex: 1; align-items: stretch; }
-    .day-col { background: var(--bg-card); color: var(--text-main); border-radius: var(--radius-sm); padding: 10px 2px; border: 1px solid var(--border-color); font: inherit; font-size: 0.75rem; cursor: pointer; width: 100%; height: auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
-    .day-col.today { border-color: var(--primary); background: var(--primary-light); font-weight: bold; }
+    .week-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; margin-bottom: 8px; }
+    .day-col { background: transparent; color: var(--text-muted); border-radius: var(--radius-sm); padding: 8px 2px; border: 1px solid transparent; font: inherit; font-size: 0.75rem; cursor: pointer; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .day-col strong { font-size: 0.95rem; color: var(--text-main); font-weight: 600; }
+    .day-col.today strong { color: var(--primary); }
+    .day-col.selected { border-color: var(--primary); background: var(--primary-light); }
+    .day-col.selected strong { font-weight: 700; }
     .day-col:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .week-dose-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 4px; border-top: 1px solid var(--border-color); cursor: pointer; color: var(--text-main); }
+    .week-dose-row:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+    .week-dose-pet { font-size: 0.75rem; color: var(--text-muted); }
+    .dose-status { display: flex; flex-shrink: 0; color: var(--text-main); }
+    .week-dose-empty { color: var(--text-muted); font-size: 0.85rem; padding: 12px 4px; border-top: 1px solid var(--border-color); }
     .dose-dot { display: block; font-size: 1rem; margin-top: 4px; }
 
     /* LISTS & BADGES */
