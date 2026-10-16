@@ -196,7 +196,6 @@ begin
     return target_family;
   end if;
 
-  delete from public.family_members where user_id = auth.uid();
   insert into public.family_members (family_id, user_id, role, receive_email)
   values (target_family.id, auth.uid(), 'cuidador', true);
 
@@ -376,6 +375,150 @@ create unique index if not exists treatments_code_key on public.treatments (code
 alter table public.treatments
   add column if not exists dosage_quantity numeric,
   add column if not exists dosage_unit text;
+
+-- Cuidador temporario (so administra doses) com periodo de acesso; varias familias por usuario.
+alter table public.family_members
+  add column if not exists starts_on date,
+  add column if not exists ends_on date;
+
+do $$
+declare
+  existing record;
+begin
+  for existing in
+    select conname from pg_constraint
+    where conrelid = 'public.family_members'::regclass
+      and contype = 'c'
+      and pg_get_constraintdef(oid) ilike '%role%'
+  loop
+    execute format('alter table public.family_members drop constraint %I', existing.conname);
+  end loop;
+  alter table public.family_members
+    add constraint family_members_role_check
+    check (role in ('admin', 'cuidador', 'visualizador', 'cuidador_temporario'));
+end;
+$$;
+
+-- Retorna 'blocked' (fora do periodo), 'limited' (periodo ativo) ou null (nao e cuidador temporario).
+create or replace function public.caregiver_restriction(p_family_id uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case
+    when fm.role <> 'cuidador_temporario' then null
+    when (fm.starts_on is not null and current_date < fm.starts_on)
+      or (fm.ends_on is not null and current_date > fm.ends_on) then 'blocked'
+    else 'limited'
+  end
+  from public.family_members fm
+  where fm.family_id = p_family_id and fm.user_id = auth.uid()
+$$;
+
+create or replace function public.pet_caregiver_restriction(p_pet_id uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.caregiver_restriction(p.family_id) from public.pets p where p.id = p_pet_id
+$$;
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['pets', 'medications', 'treatments', 'doses'] loop
+    execute format('drop policy if exists "temp caregiver blocked" on public.%I', t);
+    execute format('create policy "temp caregiver blocked" on public.%I as restrictive for all to authenticated using (coalesce(public.caregiver_restriction(family_id), '''') <> ''blocked'')', t);
+  end loop;
+
+  foreach t in array array['pets', 'medications', 'treatments'] loop
+    execute format('drop policy if exists "temp caregiver no insert" on public.%I', t);
+    execute format('create policy "temp caregiver no insert" on public.%I as restrictive for insert to authenticated with check (public.caregiver_restriction(family_id) is null)', t);
+    execute format('drop policy if exists "temp caregiver no update" on public.%I', t);
+    execute format('create policy "temp caregiver no update" on public.%I as restrictive for update to authenticated using (public.caregiver_restriction(family_id) is null)', t);
+    execute format('drop policy if exists "temp caregiver no delete" on public.%I', t);
+    execute format('create policy "temp caregiver no delete" on public.%I as restrictive for delete to authenticated using (public.caregiver_restriction(family_id) is null)', t);
+  end loop;
+
+  drop policy if exists "temp caregiver no delete" on public.doses;
+  create policy "temp caregiver no delete" on public.doses as restrictive for delete to authenticated using (public.caregiver_restriction(family_id) is null);
+
+  drop policy if exists "temp caregiver blocked" on public.weight_records;
+  create policy "temp caregiver blocked" on public.weight_records as restrictive for all to authenticated using (coalesce(public.pet_caregiver_restriction(pet_id), '') <> 'blocked');
+  drop policy if exists "temp caregiver no insert" on public.weight_records;
+  create policy "temp caregiver no insert" on public.weight_records as restrictive for insert to authenticated with check (public.pet_caregiver_restriction(pet_id) is null);
+  drop policy if exists "temp caregiver no update" on public.weight_records;
+  create policy "temp caregiver no update" on public.weight_records as restrictive for update to authenticated using (public.pet_caregiver_restriction(pet_id) is null);
+  drop policy if exists "temp caregiver no delete" on public.weight_records;
+  create policy "temp caregiver no delete" on public.weight_records as restrictive for delete to authenticated using (public.pet_caregiver_restriction(pet_id) is null);
+end;
+$$;
+
+create or replace function public.invite_member_to_family(p_family_id uuid, p_email text, p_role text, p_starts_on date default null, p_ends_on date default null)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_user_id uuid;
+begin
+  if not exists (
+    select 1 from public.family_members fm
+    where fm.family_id = p_family_id and fm.user_id = auth.uid() and fm.role = 'admin'
+  ) then
+    raise exception 'Apenas administradores podem convidar membros';
+  end if;
+
+  if p_role not in ('admin', 'cuidador', 'visualizador', 'cuidador_temporario') then
+    raise exception 'Funcao invalida';
+  end if;
+
+  if p_starts_on is not null and p_ends_on is not null and p_ends_on < p_starts_on then
+    raise exception 'A data final deve ser igual ou posterior a data de inicio';
+  end if;
+
+  select u.id into target_user_id from auth.users u where lower(u.email) = lower(trim(p_email));
+  if target_user_id is null then
+    raise exception 'Usuario nao encontrado';
+  end if;
+
+  insert into public.family_members (family_id, user_id, role, receive_email, starts_on, ends_on)
+  values (p_family_id, target_user_id, p_role, true,
+          case when p_role = 'cuidador_temporario' then p_starts_on end,
+          case when p_role = 'cuidador_temporario' then p_ends_on end)
+  on conflict (family_id, user_id) do update
+    set role = excluded.role, starts_on = excluded.starts_on, ends_on = excluded.ends_on;
+end;
+$$;
+
+create or replace function public.delete_family(p_family_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1 from public.family_members fm
+    where fm.family_id = p_family_id and fm.user_id = auth.uid() and fm.role = 'admin'
+  ) then
+    raise exception 'Apenas administradores podem excluir uma familia';
+  end if;
+
+  delete from public.families where id = p_family_id;
+end;
+$$;
+
+grant execute on function public.invite_member_to_family(uuid, text, text, date, date) to authenticated;
+grant execute on function public.delete_family(uuid) to authenticated;
+grant execute on function public.caregiver_restriction(uuid) to authenticated;
+grant execute on function public.pet_caregiver_restriction(uuid) to authenticated;
 
 grant execute on function public.join_family_by_code(text) to authenticated;
 grant execute on function public.invite_member_by_email(text, text) to authenticated;

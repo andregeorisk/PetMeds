@@ -213,6 +213,8 @@
     .kpi-label { font-size: 0.7rem; color: var(--text-muted); }
 
     .week-carousel { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    body.restricted-caregiver #page-pets > *, body.restricted-caregiver #page-remedios > *, body.restricted-caregiver #page-admin > *, body.access-blocked #page-dashboard > *, body.access-blocked #page-pets > *, body.access-blocked #page-remedios > *, body.access-blocked #page-admin > * { display: none !important; }
+    body.restricted-caregiver #page-pets::after, body.restricted-caregiver #page-remedios::after, body.restricted-caregiver #page-admin::after, body.access-blocked #page-dashboard::after, body.access-blocked #page-pets::after, body.access-blocked #page-remedios::after, body.access-blocked #page-admin::after { content: 'Nenhum conteúdo disponível para o seu acesso.'; color: var(--text-muted); display: block; padding: 16px 0; }
     .dashboard-week-card { min-height: 180px; height: auto; margin-bottom: 0; display: flex; flex-direction: column; }
     .week-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; flex: 1; align-items: stretch; }
     .day-col { background: var(--bg-card); color: var(--text-main); border-radius: var(--radius-sm); padding: 10px 2px; border: 1px solid var(--border-color); font: inherit; font-size: 0.75rem; cursor: pointer; width: 100%; height: auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }

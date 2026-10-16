@@ -98,13 +98,17 @@
         <div class="user-info-bar">
           <span id="header-user-name">Usuário</span> 
           <span id="header-role-badge" class="role-badge">Admin</span>
-          <span id="header-family-name" style="color: var(--text-muted);"></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px; font-weight: bold; font-style: italic; font-size: 0.8rem; color: var(--text-muted);">
+          <span>Família:</span>
+          <select id="header-family-select" onchange="switchFamily(this.value)" aria-label="Família ativa" style="font: inherit; color: inherit; background: transparent; border: none; max-width: 55vw;"></select>
         </div>
       </div>
       <button class="btn btn-secondary btn-sm" onclick="logout()">Sair</button>
     </header>
 
     <main>
+      <div id="access-blocked-banner" class="card" style="display: none;"></div>
       <!-- 1. DASHBOARD -->
       <section id="page-dashboard" class="page active">
         <div class="pet-tabs" id="dash-pet-tabs"></div>
@@ -431,6 +435,18 @@
         <div class="card">
           <h3>Sua Família / Grupo</h3>
           <div id="family-info-container"></div>
+        </div>
+
+        <!-- CRIAR NOVA FAMÍLIA -->
+        <div class="card">
+          <h3>Criar Nova Família</h3>
+          <form onsubmit="handleCreateFamily(event)">
+            <div class="form-group">
+              <label>Nome da Família</label>
+              <input type="text" id="new-family-name" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-secondary">Criar Família</button>
+          </form>
         </div>
 
         <!-- ENTRAR EM OUTRA FAMÍLIA POR CÓDIGO -->

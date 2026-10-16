@@ -11,6 +11,20 @@ let activeTreatmentTab = 'active';
 let pendingDoseConfirmationId = null;
 let activeDayDetailsDate = null;
 let authMode = 'login';
+let userFamilies = [];
+const ACTIVE_FAMILY_KEY = 'petmeds.activeFamilyId';
+
+function getAccessState(role, startsOn, endsOn) {
+  if (role !== 'cuidador_temporario') return 'active';
+  const today = toLocalDateString();
+  if (startsOn && today < startsOn) return 'scheduled';
+  if (endsOn && today > endsOn) return 'expired';
+  return 'active';
+}
+
+function isTemporaryCaregiver() {
+  return getUserRole() === 'cuidador_temporario';
+}
 
 function toLocalDateString(date = new Date()) {
   const year = date.getFullYear();
@@ -88,16 +102,25 @@ async function loadRemoteData() {
   const profile = await request(supabaseClient.from('profiles').select('id, name, receive_email_notif').eq('id', authUser.id).single());
   currentUser = { id: authUser.id, name: profile.name, email: authUser.email, receiveEmailNotif: profile.receive_email_notif };
 
-  const memberships = await request(supabaseClient.from('family_members').select('family_id, role, receive_email, families(id, name, code, admin_id)').eq('user_id', authUser.id));
+  const memberships = await request(supabaseClient.from('family_members').select('family_id, role, receive_email, starts_on, ends_on, families(id, name, code, admin_id)').eq('user_id', authUser.id));
   if (!memberships.length) {
+    userFamilies = [];
     currentFamily = null;
     return;
   }
 
-  const membership = memberships[0];
+  const membership = memberships.find(item => item.family_id === localStorage.getItem(ACTIVE_FAMILY_KEY)) || memberships[0];
+  localStorage.setItem(ACTIVE_FAMILY_KEY, membership.family_id);
+  userFamilies = memberships.map(item => ({ id: item.family_id, name: item.families.name, role: item.role }));
   const family = membership.families;
+  const accessState = getAccessState(membership.role, membership.starts_on, membership.ends_on);
+  if (accessState !== 'active') {
+    currentFamily = { id: family.id, name: family.name, code: '', adminId: family.admin_id, accessState, startsOn: membership.starts_on, endsOn: membership.ends_on, members: [{ userId: authUser.id, role: membership.role, startsOn: membership.starts_on, endsOn: membership.ends_on, receiveEmail: membership.receive_email }] };
+    db = { users: [{ id: authUser.id, name: profile.name, email: authUser.email, receiveEmailNotif: profile.receive_email_notif }], families: [currentFamily], pets: [], medications: [], treatments: [], doses: [] };
+    return;
+  }
   const [members, profiles, pets, weights, medications, treatments, doses] = await Promise.all([
-    request(supabaseClient.from('family_members').select('family_id, user_id, role, receive_email').eq('family_id', family.id)),
+    request(supabaseClient.from('family_members').select('family_id, user_id, role, receive_email, starts_on, ends_on').eq('family_id', family.id)),
     request(supabaseClient.from('profiles').select('id, name')),
     request(supabaseClient.from('pets').select('*').eq('family_id', family.id).order('name')),
     request(supabaseClient.from('weight_records').select('*').order('recorded_at')),
@@ -120,7 +143,7 @@ async function loadRemoteData() {
     name: family.name,
     code: family.code,
     adminId: family.admin_id,
-    members: members.map(member => ({ userId: member.user_id, role: member.role, receiveEmail: member.receive_email }))
+    members: members.map(member => ({ userId: member.user_id, role: member.role, receiveEmail: member.receive_email, startsOn: member.starts_on, endsOn: member.ends_on }))
   };
   db.users = members.map(member => ({
     id: member.user_id,
@@ -287,9 +310,26 @@ function renderApp() {
 
 function updateHeaderInfo() {
   document.getElementById('header-user-name').innerText = currentUser.name;
-  document.getElementById('header-family-name').innerText = currentFamily ? `· Família: ${currentFamily.name}` : '';
-  const labels = { admin: 'Admin', cuidador: 'Cuidador', visualizador: 'Visualizador' };
+  const familySelect = document.getElementById('header-family-select');
+  familySelect.innerHTML = userFamilies.map(family => `<option value="${escapeHtml(family.id)}">${escapeHtml(family.name)}</option>`).join('');
+  familySelect.value = currentFamily?.id || '';
+  const labels = { admin: 'Admin', cuidador: 'Cuidador', visualizador: 'Visualizador', cuidador_temporario: 'Cuidador temporário' };
   document.getElementById('header-role-badge').innerText = labels[getUserRole()] || 'Membro';
+  document.body.classList.toggle('restricted-caregiver', isTemporaryCaregiver());
+  const blocked = currentFamily?.accessState && currentFamily.accessState !== 'active';
+  document.body.classList.toggle('access-blocked', Boolean(blocked));
+  const banner = document.getElementById('access-blocked-banner');
+  banner.style.display = blocked ? 'block' : 'none';
+  banner.innerHTML = blocked ? (currentFamily.accessState === 'scheduled' ? `<strong>Acesso ainda não iniciado.</strong><p style="margin-top:4px">Seu acesso a esta família começa em ${formatDate(currentFamily.startsOn)}.</p>` : `<strong>Acesso desativado.</strong><p style="margin-top:4px">Seu período como cuidador temporário nesta família terminou em ${formatDate(currentFamily.endsOn)}. Peça a um administrador para reativá-lo.</p>`) : '';
+}
+
+async function switchFamily(familyId) {
+  localStorage.setItem(ACTIVE_FAMILY_KEY, familyId);
+  activePetId = 'all';
+  try {
+    await refreshApp();
+    switchPage('dashboard');
+  } catch (error) { showError(error, 'Não foi possível trocar de família'); }
 }
 
 function switchPage(pageId) {
@@ -1318,17 +1358,28 @@ function renderFamilySection() {
   const isAdmin = getUserRole() === 'admin';
   const members = currentFamily.members.map(member => {
     const user = db.users.find(item => item.id === member.userId);
-    const controls = isAdmin && member.userId !== currentUser.id ? `<div><select class="form-control" style="font-size:0.75rem;padding:4px" onchange="updateMemberRole('${member.userId}', this.value)"><option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option><option value="cuidador" ${member.role === 'cuidador' ? 'selected' : ''}>Cuidador</option><option value="visualizador" ${member.role === 'visualizador' ? 'selected' : ''}>Visualizador</option></select><button class="btn btn-danger btn-sm" style="margin-top:4px;padding:2px 6px" onclick="removeMember('${member.userId}')">Remover</button></div>` : '';
-    return `<div class="list-item"><div><strong>${escapeHtml(user?.name || 'Membro')}</strong><br><span style="font-size:0.75rem;color:var(--text-muted)">Função: ${member.role}</span></div>${controls}</div>`;
+    const roleLabels = { admin: 'Admin', cuidador: 'Cuidador', visualizador: 'Visualizador', cuidador_temporario: 'Cuidador temporário' };
+    const isTemporary = member.role === 'cuidador_temporario';
+    const stateLabels = { active: 'Ativo', scheduled: 'Aguardando início', expired: 'Desativado' };
+    const state = getAccessState(member.role, member.startsOn, member.endsOn);
+    const periodInfo = isTemporary ? `<br><span style="font-size:0.75rem;color:var(--text-muted)">${stateLabels[state]} | Período: ${member.startsOn ? formatDate(member.startsOn) : 'sem início'} a ${member.endsOn ? formatDate(member.endsOn) : 'sem fim'}</span>` : '';
+    const periodControls = isTemporary ? `<div style="display:flex;gap:4px;margin-top:4px"><input type="date" class="form-control" style="font-size:0.75rem;padding:4px" id="member-start-${member.userId}" value="${member.startsOn || ''}" aria-label="Data de início"><input type="date" class="form-control" style="font-size:0.75rem;padding:4px" id="member-end-${member.userId}" value="${member.endsOn || ''}" aria-label="Data final"></div><button class="btn btn-secondary btn-sm" style="margin-top:4px;padding:2px 6px" onclick="updateMemberPeriod('${member.userId}')">${state === 'expired' ? 'Reativar com este período' : 'Salvar período'}</button> ` : '';
+    const controls = isAdmin && member.userId !== currentUser.id ? `<div><select class="form-control" style="font-size:0.75rem;padding:4px" onchange="updateMemberRole('${member.userId}', this.value)"><option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option><option value="cuidador" ${member.role === 'cuidador' ? 'selected' : ''}>Cuidador</option><option value="cuidador_temporario" ${isTemporary ? 'selected' : ''}>Cuidador temporário</option><option value="visualizador" ${member.role === 'visualizador' ? 'selected' : ''}>Visualizador</option></select>${periodControls}<button class="btn btn-danger btn-sm" style="margin-top:4px;padding:2px 6px" onclick="removeMember('${member.userId}')">Remover</button></div>` : '';
+    return `<div class="list-item"><div><strong>${escapeHtml(user?.name || 'Membro')}</strong><br><span style="font-size:0.75rem;color:var(--text-muted)">Função: ${roleLabels[member.role] || member.role}</span>${periodInfo}</div>${controls}</div>`;
   }).join('');
-  const controls = isAdmin ? `<div style="margin-top:16px;border-top:1px solid var(--border-color);padding-top:12px"><h4>Código de convite da família</h4><div class="code-box">${escapeHtml(currentFamily.code)}</div><h4 style="margin-top:16px">Convidar por e-mail</h4><form onsubmit="inviteMemberByEmail(event)"><div class="form-group"><input type="email" id="invite-email" class="form-control" placeholder="E-mail do usuário cadastrado" required></div><div class="form-group"><select id="invite-role" class="form-control"><option value="cuidador">Cuidador</option><option value="visualizador">Visualizador</option><option value="admin">Administrador</option></select></div><button type="submit" class="btn btn-sm">Adicionar por e-mail</button></form><form onsubmit="handleRenameFamily(event)" style="margin-top:16px"><div class="form-group"><label>Nome do grupo/família</label><input type="text" id="family-name-input" class="form-control" value="${escapeHtml(currentFamily.name)}" required></div><button type="submit" class="btn btn-secondary btn-sm">Renomear família</button></form><button class="btn btn-danger btn-sm" style="margin-top:12px" onclick="handleDeleteFamily()">Excluir família completa</button></div>` : '';
+  const controls = isAdmin ? `<div style="margin-top:16px;border-top:1px solid var(--border-color);padding-top:12px"><h4>Código de convite da família</h4><div class="code-box">${escapeHtml(currentFamily.code)}</div><h4 style="margin-top:16px">Convidar por e-mail</h4><form onsubmit="inviteMemberByEmail(event)"><div class="form-group"><input type="email" id="invite-email" class="form-control" placeholder="E-mail do usuário cadastrado" required></div><div class="form-group"><select id="invite-role" class="form-control" onchange="toggleInvitePeriod(this.value)"><option value="cuidador">Cuidador</option><option value="cuidador_temporario">Cuidador temporário (só administra doses)</option><option value="visualizador">Visualizador</option><option value="admin">Administrador</option></select></div><div id="invite-period" style="display:none"><div class="form-group"><label>Início do acesso</label><input type="date" id="invite-starts-on" class="form-control"></div><div class="form-group"><label>Fim do acesso</label><input type="date" id="invite-ends-on" class="form-control"></div></div><button type="submit" class="btn btn-sm">Adicionar por e-mail</button></form><form onsubmit="handleRenameFamily(event)" style="margin-top:16px"><div class="form-group"><label>Nome do grupo/família</label><input type="text" id="family-name-input" class="form-control" value="${escapeHtml(currentFamily.name)}" required></div><button type="submit" class="btn btn-secondary btn-sm">Renomear família</button></form><button class="btn btn-danger btn-sm" style="margin-top:12px" onclick="handleDeleteFamily()">Excluir família completa</button></div>` : '';
   container.innerHTML = `<p><strong>Nome do grupo:</strong> ${escapeHtml(currentFamily.name)}</p><h4 style="margin-top:12px">Membros participantes:</h4>${members}${controls}`;
 }
 
 async function inviteMemberByEmail(event) {
   event.preventDefault();
+  const role = document.getElementById('invite-role').value;
+  const isTemporary = role === 'cuidador_temporario';
+  const startsOn = isTemporary ? document.getElementById('invite-starts-on').value || null : null;
+  const endsOn = isTemporary ? document.getElementById('invite-ends-on').value || null : null;
+  if (startsOn && endsOn && endsOn < startsOn) return showAlertModal('Período inválido', 'A data final deve ser igual ou posterior à data de início.');
   try {
-    await request(supabaseClient.rpc('invite_member_by_email', { p_email: document.getElementById('invite-email').value.trim(), p_role: document.getElementById('invite-role').value }));
+    await request(supabaseClient.rpc('invite_member_to_family', { p_family_id: currentFamily.id, p_email: document.getElementById('invite-email').value.trim(), p_role: role, p_starts_on: startsOn, p_ends_on: endsOn }));
     document.getElementById('invite-email').value = '';
     await refreshApp();
     showAlertModal('Membro adicionado', 'O usuário agora faz parte do grupo familiar.');
@@ -1338,11 +1389,37 @@ async function inviteMemberByEmail(event) {
 async function handleJoinByCode(event) {
   event.preventDefault();
   try {
-    await request(supabaseClient.rpc('join_family_by_code', { p_code: document.getElementById('join-family-code').value }));
+    const joined = await request(supabaseClient.rpc('join_family_by_code', { p_code: document.getElementById('join-family-code').value }));
     document.getElementById('join-family-code').value = '';
+    if (joined?.id) localStorage.setItem(ACTIVE_FAMILY_KEY, joined.id);
     await refreshApp();
-    showAlertModal('Grupo atualizado', 'Você entrou no novo grupo como Cuidador.');
+    showAlertModal('Grupo adicionado', 'Você entrou no grupo como Cuidador e ele agora é a família ativa.');
   } catch (error) { showError(error, 'Não foi possível entrar no grupo'); }
+}
+
+function toggleInvitePeriod(role) {
+  document.getElementById('invite-period').style.display = role === 'cuidador_temporario' ? 'block' : 'none';
+}
+
+async function handleCreateFamily(event) {
+  event.preventDefault();
+  try {
+    const created = await request(supabaseClient.rpc('create_personal_family', { p_name: document.getElementById('new-family-name').value.trim() }));
+    document.getElementById('new-family-name').value = '';
+    if (created?.id) localStorage.setItem(ACTIVE_FAMILY_KEY, created.id);
+    await refreshApp();
+    showAlertModal('Família criada', 'A nova família agora é a família ativa.');
+  } catch (error) { showError(error, 'Não foi possível criar a família'); }
+}
+
+async function updateMemberPeriod(userId) {
+  const startsOn = document.getElementById(`member-start-${userId}`).value || null;
+  const endsOn = document.getElementById(`member-end-${userId}`).value || null;
+  if (startsOn && endsOn && endsOn < startsOn) return showAlertModal('Período inválido', 'A data final deve ser igual ou posterior à data de início.');
+  try {
+    await request(supabaseClient.from('family_members').update({ starts_on: startsOn, ends_on: endsOn }).eq('family_id', currentFamily.id).eq('user_id', userId));
+    await refreshApp();
+  } catch (error) { showError(error, 'Não foi possível atualizar o período'); }
 }
 
 async function handleRenameFamily(event) {
@@ -1356,9 +1433,12 @@ async function handleRenameFamily(event) {
 async function handleDeleteFamily() {
   if (!confirm('Excluir a família apagará pets, tratamentos e histórico compartilhados. Continuar?')) return;
   try {
-    await request(supabaseClient.rpc('delete_family_and_create_personal', { p_name: `Família de ${currentUser.name.split(' ')[0]}` }));
+    const wasLastFamily = userFamilies.length <= 1;
+    await request(supabaseClient.rpc('delete_family', { p_family_id: currentFamily.id }));
+    localStorage.removeItem(ACTIVE_FAMILY_KEY);
+    if (wasLastFamily) await request(supabaseClient.rpc('create_personal_family', { p_name: `Família de ${currentUser.name.split(' ')[0]}` }));
     await refreshApp();
-    showAlertModal('Família excluída', 'Seu ambiente pessoal foi recriado.');
+    showAlertModal('Família excluída', wasLastFamily ? 'Seu ambiente pessoal foi recriado.' : 'Você voltou para outra família.');
   } catch (error) { showError(error, 'Não foi possível excluir a família'); }
 }
 
