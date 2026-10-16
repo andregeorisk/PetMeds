@@ -11,6 +11,23 @@ alter table public.treatments
   add column if not exists finished_at timestamptz,
   add column if not exists pause_history jsonb not null default '[]'::jsonb;
 
+alter table public.pets
+  add column if not exists donated_at date,
+  add column if not exists deceased_at date;
+
+alter table public.medications
+  add column if not exists stock_history jsonb not null default '[]'::jsonb;
+
+update public.medications
+set stock_history = jsonb_build_array(jsonb_build_object(
+  'type', 'initial',
+  'purchased_at', coalesce(bought_at, current_date)::text,
+  'expires_at', expires_at::text,
+  'quantity_added', quantity,
+  'recorded_at', now()
+))
+where stock_history = '[]'::jsonb;
+
 create policy "shared family profiles"
 on public.profiles for select
 to authenticated

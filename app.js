@@ -4,6 +4,8 @@ let db = { users: [], families: [], pets: [], medications: [], treatments: [], d
 let currentUser = null;
 let currentFamily = null;
 let activePetId = 'all';
+let activePetFilter = 'active';
+let activeMedicationFilter = 'available';
 let currentWeekOffset = 0;
 let activeTreatmentTab = 'active';
 let pendingDelaySuggestion = null;
@@ -128,8 +130,8 @@ async function loadRemoteData() {
     receiveEmailNotif: member.user_id === currentUser.id ? currentUser.receiveEmailNotif : true
   }));
   db.families = [currentFamily];
-  db.pets = pets.map(pet => ({ ...pet, status: pet.status || 'active', familyId: pet.family_id, birth: pet.birth_date, weightHistory: weightsByPet.get(pet.id) || [] }));
-  db.medications = medications.map(med => ({ ...med, familyId: med.family_id, qty: Number(med.quantity), buyDate: med.bought_at, expDate: med.expires_at }));
+  db.pets = pets.map(pet => ({ ...pet, status: pet.status || 'active', familyId: pet.family_id, birth: pet.birth_date, donatedAt: pet.donated_at, deceasedAt: pet.deceased_at, weightHistory: weightsByPet.get(pet.id) || [] }));
+  db.medications = medications.map(med => ({ ...med, familyId: med.family_id, qty: Number(med.quantity), buyDate: med.bought_at, expDate: med.expires_at, stockHistory: Array.isArray(med.stock_history) ? med.stock_history : [] }));
   db.treatments = treatments.map(treatment => ({ ...treatment, familyId: treatment.family_id, petId: treatment.pet_id, medId: treatment.medication_id, intervalDays: treatment.interval_days, intervalValue: treatment.interval_value || treatment.interval_days || 1, intervalUnit: treatment.interval_unit || 'day', startDate: treatment.start_date || treatment.created_at.substring(0, 10), scheduleMode: treatment.schedule_mode || 'exact', toleranceMinutes: treatment.tolerance_minutes || 0, durationType: treatment.duration_type, endDate: treatment.end_date, pausedAt: treatment.paused_at, finishedAt: treatment.finished_at, pauseHistory: Array.isArray(treatment.pause_history) ? treatment.pause_history : [], createdAt: treatment.created_at, times: treatment.times.map(time => time.substring(0, 5)) }));
   db.doses = doses.map(dose => ({ ...dose, familyId: dose.family_id, treatmentId: dose.treatment_id, petId: dose.pet_id, medId: dose.medication_id, administeredById: dose.administered_by, scheduledDateTime: `${toLocalDateTimeString(new Date(dose.scheduled_at))}:00`, actualDateTime: dose.actual_at, notified: dose.notified }));
 }
@@ -309,7 +311,16 @@ async function savePet(event) {
   event.preventDefault();
   if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem alterar pets.');
   const id = document.getElementById('pet-id').value;
-  const values = { name: document.getElementById('pet-name').value.trim(), species: document.getElementById('pet-species').value, birth_date: document.getElementById('pet-birth').value, status: document.getElementById('pet-status').value };
+  const existingPet = db.pets.find(pet => pet.id === id);
+  const status = document.getElementById('pet-status').value;
+  const values = {
+    name: document.getElementById('pet-name').value.trim(),
+    species: document.getElementById('pet-species').value,
+    birth_date: document.getElementById('pet-birth').value,
+    status,
+    donated_at: status === 'donated' ? document.getElementById('pet-donated-date').value || existingPet?.donatedAt || (!existingPet || existingPet.status !== 'donated' ? toLocalDateString() : null) : existingPet?.donatedAt || null,
+    deceased_at: status === 'deceased' ? document.getElementById('pet-deceased-date').value || existingPet?.deceasedAt || (!existingPet || existingPet.status !== 'deceased' ? toLocalDateString() : null) : existingPet?.deceasedAt || null
+  };
   try {
     if (id) await request(supabaseClient.from('pets').update(values).eq('id', id));
     else await request(supabaseClient.from('pets').insert({ ...values, family_id: currentFamily.id }));
@@ -332,8 +343,11 @@ function editPet(id) {
   document.getElementById('pet-species').value = pet.species;
   document.getElementById('pet-birth').value = pet.birth;
   document.getElementById('pet-status').value = pet.status;
+  document.getElementById('pet-donated-date').value = pet.donatedAt?.substring(0, 10) || '';
+  document.getElementById('pet-deceased-date').value = pet.deceasedAt?.substring(0, 10) || '';
   document.getElementById('pet-status').disabled = pet.status === 'deceased';
   document.getElementById('pet-status-help').innerText = pet.status === 'deceased' ? 'Pets falecidos não podem ser reativados.' : 'Pets doados ou perdidos podem voltar para Ativo.';
+  togglePetStatusDates(pet.status);
   document.getElementById('pet-form-title').innerText = 'Editar Pet';
   document.getElementById('pet-modal').style.display = 'flex';
 }
@@ -342,9 +356,21 @@ function resetPetForm() {
   document.getElementById('form-pet').reset();
   document.getElementById('pet-id').value = '';
   document.getElementById('pet-status').disabled = false;
+  document.getElementById('pet-donated-date').value = '';
+  document.getElementById('pet-deceased-date').value = '';
   document.getElementById('pet-status-help').innerText = '';
+  togglePetStatusDates('active');
   document.getElementById('pet-form-title').innerText = 'Cadastrar Novo Pet';
   document.getElementById('pet-modal').style.display = 'none';
+}
+
+function togglePetStatusDates(status, setDefaultDate = false) {
+  const donatedGroup = document.getElementById('pet-donated-date-group');
+  const deceasedGroup = document.getElementById('pet-deceased-date-group');
+  donatedGroup.style.display = status === 'donated' ? 'block' : 'none';
+  deceasedGroup.style.display = status === 'deceased' ? 'block' : 'none';
+  if (setDefaultDate && status === 'donated' && !document.getElementById('pet-donated-date').value) document.getElementById('pet-donated-date').value = toLocalDateString();
+  if (setDefaultDate && status === 'deceased' && !document.getElementById('pet-deceased-date').value) document.getElementById('pet-deceased-date').value = toLocalDateString();
 }
 
 async function deletePet(id) {
@@ -363,18 +389,29 @@ function renderPets() {
   const list = document.getElementById('pets-list');
   const isViewer = getUserRole() === 'visualizador';
   document.getElementById('add-pet-button').style.display = isViewer ? 'none' : 'block';
+  document.querySelectorAll('[data-pet-filter]').forEach(button => {
+    button.onclick = () => { activePetFilter = button.dataset.petFilter; renderPets(); };
+    button.classList.toggle('active', button.dataset.petFilter === activePetFilter);
+    button.setAttribute('aria-selected', String(button.dataset.petFilter === activePetFilter));
+  });
   const pets = getFamilyPets();
   if (!pets.length) {
     list.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhum pet cadastrado na família.</p></div>';
     return;
   }
-  list.innerHTML = pets.map(pet => {
+  const visiblePets = pets.filter(pet => activePetFilter === 'active' ? (pet.status || 'active') === 'active' : (pet.status || 'active') !== 'active');
+  if (!visiblePets.length) {
+    list.innerHTML = `<div class="card"><p style="color:var(--text-muted)">${activePetFilter === 'active' ? 'Nenhum pet ativo.' : 'Nenhum pet não ativo.'}</p></div>`;
+    return;
+  }
+  list.innerHTML = visiblePets.map(pet => {
     const lastWeight = pet.weightHistory.at(-1);
     const icon = pet.species === 'Gato' ? '🐱' : pet.species === 'Cão' ? '🐶' : '🐾';
     const statusLabels = { active: 'Ativo', donated: 'Doado', lost: 'Perdido', deceased: 'Falecido' };
     const statusClasses = { active: 'badge-success', donated: 'badge-warning', lost: 'badge-warning', deceased: 'badge-danger' };
     const status = pet.status || 'active';
-    return `<div class="card" onclick="openWeightModal('${pet.id}')"><h3>${icon} ${escapeHtml(pet.name)} <span class="badge ${statusClasses[status] || 'badge'}">${statusLabels[status] || 'Ativo'}</span></h3><p style="font-size:0.85rem;color:var(--text-muted)">Espécie: ${escapeHtml(pet.species)} | Nasc.: ${formatDate(pet.birth)}</p><p class="weight-summary" style="font-size:0.85rem;margin-top:4px"><strong>Peso Atual:</strong> ${lastWeight ? `${lastWeight.weight} kg (${formatDate(lastWeight.date)})` : 'Não registrado'}</p><div class="btn-group" onclick="event.stopPropagation()"><button class="btn btn-secondary btn-sm" onclick="openWeightModal('${pet.id}')">Histórico de Peso</button>${!isViewer ? `<button class="btn btn-secondary btn-sm" onclick="editPet('${pet.id}')">Editar</button><button class="btn btn-danger btn-sm" onclick="deletePet('${pet.id}')">Excluir</button>` : ''}</div></div>`;
+    const statusDate = status === 'donated' ? `<p style="font-size:0.85rem;margin-top:4px">Data da doação: <strong>${pet.donatedAt ? formatDate(pet.donatedAt) : 'Não registrada'}</strong></p>` : status === 'deceased' ? `<p style="font-size:0.85rem;margin-top:4px">Data do falecimento: <strong>${pet.deceasedAt ? formatDate(pet.deceasedAt) : 'Não registrada'}</strong></p>` : '';
+    return `<div class="card" onclick="openWeightModal('${pet.id}')"><h3>${icon} ${escapeHtml(pet.name)} <span class="badge ${statusClasses[status] || 'badge'}">${statusLabels[status] || 'Ativo'}</span></h3><p style="font-size:0.85rem;color:var(--text-muted)">Espécie: ${escapeHtml(pet.species)} | Nasc.: ${formatDate(pet.birth)}</p>${statusDate}<p class="weight-summary" style="font-size:0.85rem;margin-top:4px"><strong>Peso Atual:</strong> ${lastWeight ? `${lastWeight.weight} kg (${formatDate(lastWeight.date)})` : 'Não registrado'}</p><div class="btn-group" onclick="event.stopPropagation()"><button class="btn btn-secondary btn-sm" onclick="openWeightModal('${pet.id}')">Histórico de Peso</button>${!isViewer ? `<button class="btn btn-secondary btn-sm" onclick="editPet('${pet.id}')">Editar</button><button class="btn btn-danger btn-sm" onclick="deletePet('${pet.id}')">Excluir</button>` : ''}</div></div>`;
   }).join('');
 }
 
@@ -491,9 +528,18 @@ async function saveMedication(event) {
   if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem alterar medicamentos.');
   const id = document.getElementById('med-id').value;
   const values = { name: document.getElementById('med-name').value.trim(), lab: document.getElementById('med-lab').value.trim(), quantity: Number(document.getElementById('med-qty').value), unit: document.getElementById('med-unit').value, bought_at: document.getElementById('med-buy-date').value, expires_at: document.getElementById('med-exp-date').value };
+  if (!Number.isFinite(values.quantity) || values.quantity < 0) return showAlertModal('Quantidade inválida', 'Informe uma quantidade igual ou maior que zero.');
   try {
-    if (id) await request(supabaseClient.from('medications').update(values).eq('id', id));
-    else await request(supabaseClient.from('medications').insert({ ...values, family_id: currentFamily.id }));
+    if (id) {
+      const existing = db.medications.find(medication => medication.id === id);
+      const stockChanged = existing && (values.quantity !== existing.qty || values.bought_at !== existing.buyDate || values.expires_at !== existing.expDate);
+      const stockHistory = [...(existing?.stockHistory || [])];
+      if (stockChanged) stockHistory.push({ type: 'adjustment', purchased_at: values.bought_at, expires_at: values.expires_at, quantity_added: values.quantity - existing.qty, recorded_at: new Date().toISOString() });
+      await request(supabaseClient.from('medications').update({ ...values, ...(stockChanged ? { stock_history: stockHistory } : {}) }).eq('id', id));
+    } else {
+      const stockHistory = [{ type: 'initial', purchased_at: values.bought_at, expires_at: values.expires_at, quantity_added: values.quantity, recorded_at: new Date().toISOString() }];
+      await request(supabaseClient.from('medications').insert({ ...values, stock_history: stockHistory, family_id: currentFamily.id }));
+    }
     resetMedForm();
     await refreshApp();
   } catch (error) { showError(error, 'Não foi possível salvar o medicamento'); }
@@ -522,8 +568,60 @@ function editMedication(id) {
 function resetMedForm() {
   document.getElementById('form-med').reset();
   document.getElementById('med-id').value = '';
-  document.getElementById('med-form-title').innerText = 'Cadastrar Remédio';
+  document.getElementById('med-form-title').innerText = 'Cadastrar Medicamento';
   document.getElementById('med-modal').style.display = 'none';
+}
+
+function openMedicationRestock(id) {
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem atualizar o estoque.');
+  const medication = db.medications.find(item => item.id === id);
+  if (!medication) return;
+  document.getElementById('form-med-restock').reset();
+  document.getElementById('med-restock-id').value = medication.id;
+  document.getElementById('med-restock-title').innerText = `Reposição: ${medication.name}`;
+  document.getElementById('med-restock-date').value = toLocalDateString();
+  document.getElementById('med-restock-modal').style.display = 'flex';
+}
+
+function closeMedicationRestock() {
+  document.getElementById('med-restock-modal').style.display = 'none';
+}
+
+async function saveMedicationRestock(event) {
+  event.preventDefault();
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem atualizar o estoque.');
+  const id = document.getElementById('med-restock-id').value;
+  const medication = db.medications.find(item => item.id === id);
+  const quantityAdded = Number(document.getElementById('med-restock-quantity').value);
+  const purchasedAt = document.getElementById('med-restock-date').value;
+  const expiresAt = document.getElementById('med-restock-exp-date').value;
+  if (!medication || !Number.isFinite(quantityAdded) || quantityAdded <= 0 || !purchasedAt || !expiresAt) return showAlertModal('Dados incompletos', 'Informe a quantidade, a data da compra e a validade da nova caixa.');
+  const stockHistory = [...medication.stockHistory, { type: 'restock', purchased_at: purchasedAt, expires_at: expiresAt, quantity_added: quantityAdded, recorded_at: new Date().toISOString() }];
+  try {
+    await request(supabaseClient.from('medications').update({ quantity: medication.qty + quantityAdded, bought_at: purchasedAt, expires_at: expiresAt, stock_history: stockHistory }).eq('id', id));
+    closeMedicationRestock();
+    await refreshApp();
+  } catch (error) { showError(error, 'Não foi possível registrar a reposição'); }
+}
+
+function getMedicationStockCategory(medication, today = toLocalDateString()) {
+  if (medication.expDate && medication.expDate < today) return 'expired';
+  return medication.qty > 0 ? 'available' : 'empty';
+}
+
+function getMedicationStockHistoryHtml(medication) {
+  const entries = [...medication.stockHistory].sort((left, right) => left.purchased_at.localeCompare(right.purchased_at));
+  if (!entries.length) return '';
+  const rows = entries.map((entry, index) => {
+    const nextEntry = entries[index + 1];
+    const elapsedDays = Math.max(0, Math.round((Date.parse(`${nextEntry?.purchased_at || toLocalDateString()}T12:00:00`) - Date.parse(`${entry.purchased_at}T12:00:00`)) / 86400000));
+    const duration = nextEntry ? `Tempo até a próxima reposição: ${elapsedDays} dia(s)` : `Estoque registrado há ${elapsedDays} dia(s)`;
+    const entryLabel = entry.type === 'restock' ? 'Reposição' : entry.type === 'adjustment' ? 'Ajuste' : 'Estoque inicial';
+    const amount = Number(entry.quantity_added || 0);
+    const signedAmount = entry.type === 'adjustment' && amount > 0 ? '+' : '';
+    return `<div class="stock-history-entry"><span>${entryLabel}: ${formatDate(entry.purchased_at)}</span><strong>${signedAmount}${amount} ${escapeHtml(medication.unit)}</strong><small>${duration}${entry.expires_at ? ` | Validade: ${formatDate(entry.expires_at)}` : ''}</small></div>`;
+  }).join('');
+  return `<details class="stock-history"><summary>Histórico de reposições</summary>${rows}</details>`;
 }
 
 function renderMeds() {
@@ -532,14 +630,27 @@ function renderMeds() {
   const in30Days = toLocalDateString(new Date(Date.now() + 30 * 86400000));
   const isViewer = getUserRole() === 'visualizador';
   document.getElementById('add-med-button').style.display = isViewer ? 'none' : 'block';
+  document.querySelectorAll('[data-medication-filter]').forEach(button => {
+    button.onclick = () => { activeMedicationFilter = button.dataset.medicationFilter; renderMeds(); };
+    button.classList.toggle('active', button.dataset.medicationFilter === activeMedicationFilter);
+    button.setAttribute('aria-selected', String(button.dataset.medicationFilter === activeMedicationFilter));
+  });
   const meds = getFamilyMeds();
   if (!meds.length) {
     list.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhum medicamento cadastrado.</p></div>';
     return;
   }
-  list.innerHTML = meds.map(med => {
-    const badge = med.expDate < today ? '<span class="badge badge-danger">VENCIDO</span>' : med.expDate <= in30Days ? '<span class="badge badge-warning">VENCE EM BREVE</span>' : '';
-    return `<div class="card"><h3>💊 ${escapeHtml(med.name)} ${badge}</h3><p style="font-size:0.85rem;color:var(--text-muted)">Lab: ${escapeHtml(med.lab)} | Qtd: ${med.qty} ${escapeHtml(med.unit)}</p><p style="font-size:0.85rem;margin-top:4px">Validade: <strong>${formatDate(med.expDate)}</strong></p>${!isViewer ? `<div class="btn-group" style="margin-top:8px"><button class="btn btn-secondary btn-sm" onclick="editMedication('${med.id}')">Editar</button></div>` : ''}</div>`;
+  const visibleMeds = meds.filter(med => getMedicationStockCategory(med, today) === activeMedicationFilter);
+  if (!visibleMeds.length) {
+    const emptyMessages = { available: 'Nenhum medicamento dentro da validade com doses disponíveis.', empty: 'Nenhum medicamento sem doses disponíveis.', expired: 'Nenhum medicamento fora da validade.' };
+    list.innerHTML = `<div class="card"><p style="color:var(--text-muted)">${emptyMessages[activeMedicationFilter]}</p></div>`;
+    return;
+  }
+  list.innerHTML = visibleMeds.map(med => {
+    const category = getMedicationStockCategory(med, today);
+    const badge = category === 'expired' ? '<span class="badge badge-danger">FORA DA VALIDADE</span>' : med.expDate <= in30Days ? '<span class="badge badge-warning">VENCE EM BREVE</span>' : '';
+    const actions = !isViewer ? `<div class="btn-group" style="margin-top:8px"><button class="btn btn-secondary btn-sm" onclick="editMedication('${med.id}')">Editar</button><button class="btn btn-sm" onclick="openMedicationRestock('${med.id}')">Registrar reposição</button></div>` : '';
+    return `<div class="card"><h3>💊 ${escapeHtml(med.name)} ${badge}</h3><p style="font-size:0.85rem;color:var(--text-muted)">Lab: ${escapeHtml(med.lab)} | Disponível: ${med.qty} ${escapeHtml(med.unit)}</p><p style="font-size:0.85rem;margin-top:4px">Validade: <strong>${formatDate(med.expDate)}</strong></p>${getMedicationStockHistoryHtml(med)}${actions}</div>`;
   }).join('');
 }
 

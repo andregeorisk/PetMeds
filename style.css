@@ -193,8 +193,13 @@
     }
     .pet-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-    .treatment-tab { font: inherit; flex: 0 0 auto; }
+    .treatment-tabs { width: 100%; gap: 3px; overflow: hidden; }
+    .treatment-tab { flex: 1 1 0; min-width: 0; padding: 6px 2px; font: inherit; font-size: 0.78rem; text-align: center; white-space: nowrap; }
     .treatment-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+    @media (max-width: 360px) {
+      .treatment-tab { font-size: 0.68rem; }
+    }
 
     .kpi-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
     .kpi-card { background: var(--bg-card); padding: 12px 8px; border-radius: var(--radius-sm); text-align: center; border: 1px solid var(--border-color); }
@@ -218,6 +223,11 @@
       border-bottom: 1px solid var(--border-color);
     }
     .list-item:last-child { border-bottom: none; }
+
+    .stock-history { margin-top: 10px; font-size: 0.85rem; }
+    .stock-history summary { color: var(--primary); cursor: pointer; font-weight: 600; }
+    .stock-history-entry { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+    .stock-history-entry small { grid-column: 1 / -1; color: var(--text-muted); }
 
     .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; color: white; }
     .badge-warning { background: var(--accent-badge); }
