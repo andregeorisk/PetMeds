@@ -987,17 +987,6 @@ function renderAdmin() {
   renderTreatments();
 }
 
-function renderTodayDoses() {
-  const isViewer = getUserRole() === 'visualizador';
-  const todayDoses = db.doses.filter(dose => dose.scheduledDateTime.startsWith(toLocalDateString())).sort((left, right) => left.scheduledDateTime.localeCompare(right.scheduledDateTime));
-  const list = document.getElementById('today-doses-list');
-  if (!todayDoses.length) {
-    list.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhuma dose agendada para hoje.</p></div>';
-    return;
-  }
-  list.innerHTML = todayDoses.map(dose => renderDoseCard(dose, isViewer)).join('');
-}
-
 function renderDoseAdministrationHistory() {
   const memberFilter = document.getElementById('dose-history-member');
   const history = document.getElementById('dose-administration-history');
@@ -1190,7 +1179,6 @@ function isTreatmentVisibleInDashboard(treatmentId) {
 
 function renderDashboard() {
   renderDoseAdministrationHistory();
-  renderTodayDoses();
   const pets = getActiveFamilyPets();
   const tabs = document.getElementById('dash-pet-tabs');
   if (!pets.length) {

@@ -197,6 +197,9 @@
     .treatment-tab { flex: 1 1 0; min-width: 0; padding: 6px 2px; font: inherit; font-size: 0.78rem; text-align: center; white-space: nowrap; }
     .treatment-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
+    #medication-stock-tabs { width: 100%; gap: 4px; overflow: hidden; }
+    #medication-stock-tabs .pet-tab { flex: 1 1 0; min-width: 0; padding: 6px 4px; text-align: center; white-space: normal; overflow-wrap: anywhere; }
+
     @media (max-width: 360px) {
       .treatment-tab { font-size: 0.68rem; }
     }
