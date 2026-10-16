@@ -382,6 +382,7 @@ function renderApp() {
 
 function updateHeaderInfo() {
   document.getElementById('header-user-name').innerText = `Olá, ${currentUser.name.split(' ')[0]}!`;
+  document.getElementById('header-avatar').innerHTML = safePhoto(currentUser.photo) ? `<img src="${escapeHtml(currentUser.photo)}" alt="">` : escapeHtml(currentUser.name.charAt(0).toUpperCase());
   const familySelect = document.getElementById('header-family-select');
   familySelect.innerHTML = userFamilies.map(family => `<option value="${escapeHtml(family.id)}">${escapeHtml(family.name)}</option>`).join('');
   familySelect.value = currentFamily?.id || '';
