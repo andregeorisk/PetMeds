@@ -9,7 +9,8 @@ alter table public.doses
 alter table public.treatments
   add column if not exists paused_at timestamptz,
   add column if not exists finished_at timestamptz,
-  add column if not exists pause_history jsonb not null default '[]'::jsonb;
+  add column if not exists pause_history jsonb not null default '[]'::jsonb,
+  add column if not exists disabled_times text[] not null default '{}';
 
 alter table public.pets
   add column if not exists donated_at date,

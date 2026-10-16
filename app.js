@@ -8,7 +8,6 @@ let activePetFilter = 'active';
 let activeMedicationFilter = 'available';
 let currentWeekOffset = 0;
 let activeTreatmentTab = 'active';
-let pendingDelaySuggestion = null;
 let pendingDoseConfirmationId = null;
 let activeDayDetailsDate = null;
 let authMode = 'login';
@@ -132,7 +131,7 @@ async function loadRemoteData() {
   db.families = [currentFamily];
   db.pets = pets.map(pet => ({ ...pet, status: pet.status || 'active', familyId: pet.family_id, birth: pet.birth_date, donatedAt: pet.donated_at, deceasedAt: pet.deceased_at, weightHistory: weightsByPet.get(pet.id) || [] }));
   db.medications = medications.map(med => ({ ...med, familyId: med.family_id, qty: Number(med.quantity), buyDate: med.bought_at, expDate: med.expires_at, stockHistory: Array.isArray(med.stock_history) ? med.stock_history : [] }));
-  db.treatments = treatments.map(treatment => ({ ...treatment, familyId: treatment.family_id, petId: treatment.pet_id, medId: treatment.medication_id, intervalDays: treatment.interval_days, intervalValue: treatment.interval_value || treatment.interval_days || 1, intervalUnit: treatment.interval_unit || 'day', startDate: treatment.start_date || treatment.created_at.substring(0, 10), scheduleMode: treatment.schedule_mode || 'exact', toleranceMinutes: treatment.tolerance_minutes || 0, durationType: treatment.duration_type, endDate: treatment.end_date, pausedAt: treatment.paused_at, finishedAt: treatment.finished_at, pauseHistory: Array.isArray(treatment.pause_history) ? treatment.pause_history : [], createdAt: treatment.created_at, times: treatment.times.map(time => time.substring(0, 5)) }));
+  db.treatments = treatments.map(treatment => ({ ...treatment, familyId: treatment.family_id, petId: treatment.pet_id, medId: treatment.medication_id, intervalDays: treatment.interval_days, intervalValue: treatment.interval_value || treatment.interval_days || 1, intervalUnit: treatment.interval_unit || 'day', startDate: treatment.start_date || treatment.created_at.substring(0, 10), scheduleMode: treatment.schedule_mode || 'exact', toleranceMinutes: treatment.tolerance_minutes || 0, durationType: treatment.duration_type, endDate: treatment.end_date, pausedAt: treatment.paused_at, finishedAt: treatment.finished_at, pauseHistory: Array.isArray(treatment.pause_history) ? treatment.pause_history : [], disabledTimes: Array.isArray(treatment.disabled_times) ? treatment.disabled_times : [], createdAt: treatment.created_at, times: treatment.times.map(time => time.substring(0, 5)) }));
   db.doses = doses.map(dose => ({ ...dose, familyId: dose.family_id, treatmentId: dose.treatment_id, petId: dose.pet_id, medId: dose.medication_id, administeredById: dose.administered_by, scheduledDateTime: `${toLocalDateTimeString(new Date(dose.scheduled_at))}:00`, actualDateTime: dose.actual_at, notified: dose.notified }));
 }
 
@@ -657,7 +656,7 @@ function renderMeds() {
 function addTimeField() {
   const row = document.createElement('div');
   row.className = 'time-row';
-  row.innerHTML = '<input type="time" class="form-control treat-time" required><button type="button" class="btn btn-danger btn-sm" onclick="removeTimeField(this)" aria-label="Excluir horário">Excluir</button>';
+  row.innerHTML = '<label class="treat-time-toggle"><input type="checkbox" class="treat-time-enabled" checked onchange="toggleTreatmentTime(this)"><span>Ativo</span></label><input type="time" class="form-control treat-time" required><button type="button" class="btn btn-danger btn-sm" onclick="removeTimeField(this)" aria-label="Excluir horário">Excluir</button>';
   document.getElementById('times-container').appendChild(row);
 }
 
@@ -674,7 +673,17 @@ function toggleScheduleMode(value) {
   const isWindow = value === 'window';
   document.getElementById('times-container').closest('.form-group').style.display = isAllDay ? 'none' : 'block';
   document.getElementById('group-tolerance').style.display = isWindow ? 'block' : 'none';
-  document.querySelectorAll('.treat-time').forEach(input => { input.required = !isAllDay; });
+  document.querySelectorAll('.treat-time').forEach(input => {
+    input.required = !isAllDay && input.closest('.time-row').querySelector('.treat-time-enabled').checked;
+  });
+}
+
+function toggleTreatmentTime(checkbox) {
+  const row = checkbox.closest('.time-row');
+  const input = row.querySelector('.treat-time');
+  const isAllDay = document.getElementById('treat-schedule-mode').value === 'all_day';
+  input.required = checkbox.checked && !isAllDay;
+  row.classList.toggle('treat-time-disabled', !checkbox.checked);
 }
 
 function openTreatmentForm() {
@@ -688,8 +697,11 @@ async function saveTreatment(event) {
   if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem alterar tratamentos.');
   const id = document.getElementById('treat-id').value;
   const scheduleMode = document.getElementById('treat-schedule-mode').value;
-  const times = [...document.querySelectorAll('.treat-time')].map(input => input.value).filter(Boolean);
-  if (scheduleMode !== 'all_day' && !times.length) return showAlertModal('Horário necessário', 'Adicione pelo menos um horário de administração.');
+  const timeInputs = [...document.querySelectorAll('.treat-time')];
+  const times = timeInputs.map(input => input.value).filter(Boolean);
+  const disabledTimes = scheduleMode === 'all_day' ? [] : timeInputs.filter(input => !input.closest('.time-row').querySelector('.treat-time-enabled').checked).map(input => input.value).filter(Boolean);
+  if (new Set(times).size !== times.length) return showAlertModal('Horário duplicado', 'Use apenas um campo para cada horário de administração.');
+  if (scheduleMode !== 'all_day' && !times.some(time => !disabledTimes.includes(time))) return showAlertModal('Horário necessário', 'Mantenha pelo menos um horário ativo ou selecione Dia inteiro.');
   const durationType = document.getElementById('treat-duration-type').value;
   const startDate = document.getElementById('treat-start-date').value;
   const intervalValue = Number(document.getElementById('treat-interval-value').value);
@@ -701,7 +713,7 @@ async function saveTreatment(event) {
   const endDate = durationType === 'until_date' ? document.getElementById('treat-end-date').value : null;
   if (durationType === 'until_date' && !endDate) return showAlertModal('Data final necessária', 'Informe a data final do tratamento.');
   const intervalDays = intervalUnit === 'day' ? intervalValue : intervalUnit === 'week' ? intervalValue * 7 : intervalUnit === 'month' ? intervalValue * 30 : intervalValue * 365;
-  const values = { pet_id: document.getElementById('treat-pet').value, medication_id: document.getElementById('treat-med').value, dosage: document.getElementById('treat-dosage').value.trim(), times: scheduleMode === 'all_day' ? ['12:00'] : times, schedule_mode: scheduleMode, tolerance_minutes: toleranceMinutes, start_date: startDate, interval_value: intervalValue, interval_unit: intervalUnit, interval_days: intervalDays, duration_type: durationType, end_date: endDate };
+  const values = { pet_id: document.getElementById('treat-pet').value, medication_id: document.getElementById('treat-med').value, dosage: document.getElementById('treat-dosage').value.trim(), times: scheduleMode === 'all_day' ? ['12:00'] : times, disabled_times: scheduleMode === 'all_day' ? [] : disabledTimes, schedule_mode: scheduleMode, tolerance_minutes: toleranceMinutes, start_date: startDate, interval_value: intervalValue, interval_unit: intervalUnit, interval_days: intervalDays, duration_type: durationType, end_date: endDate };
   try {
     if (id) {
       await request(supabaseClient.from('doses').delete().eq('treatment_id', id).in('status', ['pending', 'late']));
@@ -719,7 +731,7 @@ function resetTreatmentForm() {
   document.getElementById('treat-id').value = '';
   document.getElementById('treat-form-title').innerText = 'Novo Tratamento';
   document.getElementById('treat-submit-button').innerText = 'Criar Tratamento';
-  document.getElementById('times-container').innerHTML = '<div class="time-row"><input type="time" class="form-control treat-time" required></div>';
+  document.getElementById('times-container').innerHTML = '<div class="time-row"><label class="treat-time-toggle"><input type="checkbox" class="treat-time-enabled" checked onchange="toggleTreatmentTime(this)"><span>Ativo</span></label><input type="time" class="form-control treat-time" required></div>';
   document.getElementById('treat-start-date').value = toLocalDateString();
   document.getElementById('treat-interval-value').value = '1';
   document.getElementById('treat-interval-unit').value = 'day';
@@ -744,7 +756,10 @@ function editTreatment(id) {
   document.getElementById('treat-interval-unit').value = treatment.intervalUnit;
   document.getElementById('treat-duration-type').value = treatment.durationType;
   document.getElementById('treat-end-date').value = treatment.endDate || '';
-  document.getElementById('times-container').innerHTML = treatment.times.map((time, index) => `<div class="time-row"><input type="time" class="form-control treat-time" value="${escapeHtml(time)}" required>${index > 0 ? '<button type="button" class="btn btn-danger btn-sm" onclick="removeTimeField(this)" aria-label="Excluir horário">Excluir</button>' : ''}</div>`).join('');
+  document.getElementById('times-container').innerHTML = treatment.times.map((time, index) => {
+    const enabled = !treatment.disabledTimes.includes(time);
+    return `<div class="time-row${enabled ? '' : ' treat-time-disabled'}"><label class="treat-time-toggle"><input type="checkbox" class="treat-time-enabled" ${enabled ? 'checked' : ''} onchange="toggleTreatmentTime(this)"><span>Ativo</span></label><input type="time" class="form-control treat-time" value="${escapeHtml(time)}" ${enabled && treatment.scheduleMode !== 'all_day' ? 'required' : ''}>${index > 0 ? '<button type="button" class="btn btn-danger btn-sm" onclick="removeTimeField(this)" aria-label="Excluir horário">Excluir</button>' : ''}</div>`;
+  }).join('');
   document.getElementById('treat-form-title').innerText = 'Editar Tratamento';
   document.getElementById('treat-submit-button').innerText = 'Salvar Alterações';
   toggleEndDate(treatment.durationType);
@@ -807,7 +822,8 @@ function renderTreatments() {
       ? `<button class="btn btn-sm" onclick="resumeTreatment('${treatment.id}')">Retomar</button><button class="btn btn-danger btn-sm" onclick="finishTreatment('${treatment.id}')">Encerrar agora</button>`
       : `<button class="btn btn-secondary btn-sm" onclick="pauseTreatment('${treatment.id}')">Pausar</button><button class="btn btn-danger btn-sm" onclick="finishTreatment('${treatment.id}')">Encerrar agora</button>`;
     const actions = !isViewer ? `<div class="btn-group" style="flex-wrap:wrap">${statusActions}<button class="btn btn-secondary btn-sm" onclick="editTreatment('${treatment.id}')">Editar</button><button class="btn btn-danger btn-sm" onclick="deleteTreatment('${treatment.id}')">Excluir</button></div>` : '';
-    const scheduleLabels = { exact: `Horários: ${treatment.times.map(escapeHtml).join(', ')}`, window: `Horários: ${treatment.times.map(escapeHtml).join(', ')} (±${treatment.toleranceMinutes} min)`, all_day: 'Dia inteiro' };
+    const timeLabels = treatment.times.map(time => `${escapeHtml(time)}${treatment.disabledTimes.includes(time) ? ' (desativado)' : ''}`).join(', ');
+    const scheduleLabels = { exact: `Horários: ${timeLabels}`, window: `Horários: ${timeLabels} (±${treatment.toleranceMinutes} min)`, all_day: 'Dia inteiro' };
     return `<div class="card"><h3>${escapeHtml(pet?.name || 'Pet')} - ${escapeHtml(medication?.name || 'Medicamento')} ${status}</h3><p style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(treatment.dosage)} | ${scheduleLabels[treatment.scheduleMode] || scheduleLabels.exact} | A cada ${treatment.intervalValue} ${unitLabels[treatment.intervalUnit] || 'dia(s)'}</p><p style="font-size:0.85rem;margin-top:4px">Início: ${formatDate(treatment.startDate)} | Duração: ${duration}</p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">${doseCount}</p>${pauseHistory}${actions}</div>`;
   }).join('');
 }
@@ -855,6 +871,7 @@ function getTreatmentPlannedDoseCount(treatment) {
     if (occurrenceDate > endDate) break;
     const date = toLocalDateString(occurrenceDate);
     for (const time of treatment.times) {
+      if (treatment.disabledTimes.includes(time)) continue;
       const scheduledAt = new Date(`${date}T${time}:00`);
       if (treatment.finishedAt && scheduledAt > new Date(treatment.finishedAt)) continue;
       if (!isDoseWithinTreatmentPause(treatment, scheduledAt)) plannedCount += 1;
@@ -959,6 +976,7 @@ async function generateScheduledDoses() {
       const date = toLocalDateString(targetDate);
       if (!isTreatmentDateDue(treatment, targetDate) || (treatment.endDate && date > treatment.endDate)) continue;
       treatment.times.forEach(time => {
+        if (treatment.disabledTimes.includes(time)) return;
         const scheduledDateTime = new Date(`${date}T${time}:00`);
         if (isDoseWithinTreatmentPause(treatment, scheduledDateTime)) return;
         const scheduledAt = scheduledDateTime.toISOString();
@@ -1015,8 +1033,8 @@ function renderDoseAdministrationHistory() {
 
 function renderDoseActions(dose, isViewer) {
   if (isViewer) return '';
-  if (dose.status !== 'done' && dose.status !== 'skipped') return `<div class="btn-group" style="margin-top:10px"><button class="btn btn-sm" onclick="markDose('${dose.id}', 'now')">Dei agora</button><button class="btn btn-secondary btn-sm" onclick="markDose('${dose.id}', 'late')">Dei c/ atraso</button><button class="btn btn-danger btn-sm" onclick="markDose('${dose.id}', 'skip')">Não dei</button></div>`;
-  return `<div class="btn-group" style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="openDoseEdit('${dose.id}')">Editar registro</button><button class="btn btn-danger btn-sm" onclick="undoDose('${dose.id}')">Desfazer</button></div>`;
+  if (dose.status === 'done' || dose.status === 'skipped') return '';
+  return `<div class="btn-group" style="margin-top:10px"><button class="btn btn-sm" onclick="markDose('${dose.id}', 'now')">Dei</button><button class="btn btn-danger btn-sm" onclick="markDose('${dose.id}', 'skip')">Não Dei</button></div>`;
 }
 
 function renderDoseCard(dose, isViewer) {
@@ -1034,17 +1052,11 @@ function renderDoseCard(dose, isViewer) {
 async function markDose(doseId, action) {
   const dose = db.doses.find(item => item.id === doseId);
   if (!dose) return;
-  if (action === 'now' || action === 'late') return openDoseConfirmation(doseId);
+  if (action === 'now') return openDoseConfirmation(doseId);
   const now = new Date();
-  const values = { actual_at: now.toISOString(), status: action === 'skip' ? 'skipped' : 'done' };
+  const values = { actual_at: now.toISOString(), status: 'skipped', administered_by: null };
   try {
     await request(supabaseClient.from('doses').update(values).eq('id', doseId));
-    const treatment = db.treatments.find(item => item.id === dose.treatmentId);
-    const delayThreshold = treatment?.scheduleMode === 'window' ? treatment.toleranceMinutes : 15;
-    if (action === 'late' && now - new Date(dose.scheduledDateTime) > delayThreshold * 60000) {
-      pendingDelaySuggestion = { doseId, treatmentId: dose.treatmentId, oldTime: dose.scheduledDateTime.substring(11, 16), newTime: now.toTimeString().substring(0, 5), actualAt: now.toISOString() };
-      showDelayBanner(pendingDelaySuggestion.oldTime, pendingDelaySuggestion.newTime);
-    }
     await refreshApp();
   } catch (error) { showError(error, 'Não foi possível registrar a dose'); }
 }
@@ -1079,50 +1091,10 @@ async function confirmDoseNow(event) {
   const administeredById = document.getElementById('dose-confirm-administered-by').value;
   if (!administeredById) return showAlertModal('Responsável necessário', 'Selecione quem administrou o medicamento.');
   closeDoseConfirmation();
-  const treatment = db.treatments.find(item => item.id === dose.treatmentId);
-  const delayThreshold = treatment?.scheduleMode === 'window' ? treatment.toleranceMinutes : 15;
   try {
     await request(supabaseClient.from('doses').update({ actual_at: administeredAt.toISOString(), administered_by: administeredById, status: 'done' }).eq('id', doseId));
-    if (administeredAt - new Date(dose.scheduledDateTime) > delayThreshold * 60000) {
-      pendingDelaySuggestion = { doseId, treatmentId: dose.treatmentId, oldTime: dose.scheduledDateTime.substring(11, 16), newTime: toLocalDateTimeString(administeredAt).substring(11, 16), actualAt: administeredAt.toISOString() };
-      showDelayBanner(pendingDelaySuggestion.oldTime, pendingDelaySuggestion.newTime);
-    }
     await refreshApp();
   } catch (error) { showError(error, 'Não foi possível registrar a dose'); }
-}
-
-function showDelayBanner(oldTime, newTime) {
-  const content = `<p style="font-size:0.85rem;margin-bottom:8px">Você administrou com atraso (previsto: <strong>${oldTime}</strong>; atual: <strong>${newTime}</strong>). Deseja usar este horário para esta dose e para os próximos lembretes?</p><div class="btn-group"><button class="btn btn-sm" onclick="acceptDelayAdjust()">Ajustar dose e agenda</button><button class="btn btn-secondary btn-sm" onclick="dismissDelayAdjust()">Manter agenda</button></div>`;
-  ['delay-suggestion-banner', 'day-delay-suggestion-banner'].forEach(id => {
-    const banner = document.getElementById(id);
-    if (banner) {
-      banner.style.display = 'block';
-      banner.innerHTML = content;
-    }
-  });
-}
-
-async function acceptDelayAdjust() {
-  if (!pendingDelaySuggestion) return;
-  const treatment = db.treatments.find(item => item.id === pendingDelaySuggestion.treatmentId);
-  if (!treatment) return;
-  const times = treatment.times.map(time => time === pendingDelaySuggestion.oldTime ? pendingDelaySuggestion.newTime : time);
-  try {
-    await Promise.all([
-      request(supabaseClient.from('treatments').update({ times }).eq('id', treatment.id)),
-      request(supabaseClient.from('doses').update({ scheduled_at: pendingDelaySuggestion.actualAt }).eq('id', pendingDelaySuggestion.doseId))
-    ]);
-    dismissDelayAdjust();
-    await refreshApp();
-  } catch (error) { showError(error, 'Não foi possível ajustar a agenda'); }
-}
-
-function dismissDelayAdjust() {
-  pendingDelaySuggestion = null;
-  ['delay-suggestion-banner', 'day-delay-suggestion-banner'].forEach(id => {
-    const banner = document.getElementById(id);
-    if (banner) banner.style.display = 'none';
-  });
 }
 
 function openDoseEdit(doseId) {
@@ -1240,7 +1212,6 @@ function openDayDetails(dateString) {
 function closeDayDetails() {
   activeDayDetailsDate = null;
   document.getElementById('day-details-modal').style.display = 'none';
-  dismissDelayAdjust();
 }
 
 function renderDayDetails() {

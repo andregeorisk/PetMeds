@@ -166,6 +166,9 @@
     .btn-group { display: flex; gap: 8px; margin-top: 8px; }
     .time-row { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
     .time-row .form-control { flex: 1; }
+    .treat-time-toggle { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; color: var(--text-muted); font-size: 0.75rem; white-space: nowrap; }
+    .treat-time-toggle input { width: auto; }
+    .time-row.treat-time-disabled .treat-time { opacity: 0.6; }
     .interval-fields { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
 
     .form-group { margin-bottom: 14px; text-align: left; }
