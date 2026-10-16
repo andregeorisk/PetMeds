@@ -12,6 +12,9 @@ alter table public.doses
 alter table public.medications
   alter column bought_at drop not null;
 
+alter table public.medications
+  add column if not exists package_quantity numeric;
+
 alter table public.treatments
   add column if not exists paused_at timestamptz,
   add column if not exists finished_at timestamptz,

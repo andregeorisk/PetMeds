@@ -130,7 +130,7 @@ async function loadRemoteData() {
   }));
   db.families = [currentFamily];
   db.pets = pets.map(pet => ({ ...pet, status: pet.status || 'active', familyId: pet.family_id, birth: pet.birth_date, donatedAt: pet.donated_at, deceasedAt: pet.deceased_at, weightHistory: weightsByPet.get(pet.id) || [] }));
-  db.medications = medications.map(med => ({ ...med, familyId: med.family_id, qty: Number(med.quantity), buyDate: med.bought_at, expDate: med.expires_at, stockHistory: Array.isArray(med.stock_history) ? med.stock_history : [] }));
+  db.medications = medications.map(med => ({ ...med, familyId: med.family_id, qty: Number(med.quantity), packageQty: med.package_quantity ? Number(med.package_quantity) : null, buyDate: med.bought_at, expDate: med.expires_at, stockHistory: Array.isArray(med.stock_history) ? med.stock_history : [] }));
   db.treatments = treatments.map(treatment => ({ ...treatment, familyId: treatment.family_id, petId: treatment.pet_id, medId: treatment.medication_id, intervalDays: treatment.interval_days, intervalValue: treatment.interval_value || treatment.interval_days || 1, intervalUnit: treatment.interval_unit || 'day', startDate: treatment.start_date || treatment.created_at.substring(0, 10), scheduleMode: treatment.schedule_mode || 'exact', toleranceMinutes: treatment.tolerance_minutes || 0, durationType: treatment.duration_type, endDate: treatment.end_date, pausedAt: treatment.paused_at, finishedAt: treatment.finished_at, pauseHistory: Array.isArray(treatment.pause_history) ? treatment.pause_history : [], disabledTimes: Array.isArray(treatment.disabled_times) ? treatment.disabled_times : [], createdAt: treatment.created_at, times: treatment.times.map(time => time.substring(0, 5)) }));
   db.doses = doses.map(dose => ({ ...dose, familyId: dose.family_id, treatmentId: dose.treatment_id, petId: dose.pet_id, medId: dose.medication_id, administeredById: dose.administered_by, scheduledDateTime: `${toLocalDateTimeString(new Date(dose.scheduled_at))}:00`, actualDateTime: dose.actual_at, notified: dose.notified }));
 }
@@ -526,7 +526,7 @@ async function saveMedication(event) {
   event.preventDefault();
   if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem alterar medicamentos.');
   const id = document.getElementById('med-id').value;
-  const values = { name: document.getElementById('med-name').value.trim(), lab: document.getElementById('med-lab').value.trim(), quantity: Number(document.getElementById('med-qty').value), unit: document.getElementById('med-unit').value, bought_at: document.getElementById('med-buy-unknown').checked ? null : document.getElementById('med-buy-date').value, expires_at: document.getElementById('med-exp-date').value };
+  const values = { name: document.getElementById('med-name').value.trim(), lab: document.getElementById('med-lab').value.trim(), quantity: Number(document.getElementById('med-qty').value), package_quantity: document.getElementById('med-package-qty').value ? Number(document.getElementById('med-package-qty').value) : null, unit: document.getElementById('med-unit').value, bought_at: document.getElementById('med-buy-unknown').checked ? null : document.getElementById('med-buy-date').value, expires_at: document.getElementById('med-exp-date').value };
   if (!Number.isFinite(values.quantity) || values.quantity < 0) return showAlertModal('Quantidade inválida', 'Informe uma quantidade igual ou maior que zero.');
   try {
     if (id) {
@@ -557,6 +557,7 @@ function editMedication(id) {
   document.getElementById('med-name').value = med.name;
   document.getElementById('med-lab').value = med.lab;
   document.getElementById('med-qty').value = med.qty;
+  document.getElementById('med-package-qty').value = med.packageQty ?? '';
   document.getElementById('med-unit').value = med.unit;
   document.getElementById('med-buy-date').value = med.buyDate || '';
   toggleBuyDateUnknown(!med.buyDate);
@@ -589,6 +590,7 @@ function openMedicationRestock(id) {
   document.getElementById('med-restock-id').value = medication.id;
   document.getElementById('med-restock-title').innerText = `Reposição: ${medication.name}`;
   document.getElementById('med-restock-date').value = toLocalDateString();
+  document.getElementById('med-restock-quantity').value = medication.packageQty ?? '';
   document.getElementById('med-restock-modal').style.display = 'flex';
 }
 
@@ -659,7 +661,7 @@ function renderMeds() {
     const category = getMedicationStockCategory(med, today);
     const badge = category === 'expired' ? '<span class="badge badge-danger">FORA DA VALIDADE</span>' : med.expDate <= in30Days ? '<span class="badge badge-warning">VENCE EM BREVE</span>' : '';
     const actions = !isViewer ? `<div class="btn-group" style="margin-top:8px"><button class="btn btn-secondary btn-sm" onclick="editMedication('${med.id}')">Editar</button><button class="btn btn-sm" onclick="openMedicationRestock('${med.id}')">Registrar reposição</button></div>` : '';
-    return `<div class="card"><h3>💊 ${escapeHtml(med.name)} ${badge}</h3><p style="font-size:0.85rem;color:var(--text-muted)">Lab: ${escapeHtml(med.lab)} | Disponível: ${med.qty} ${escapeHtml(med.unit)}</p><p style="font-size:0.85rem;margin-top:4px">Validade: <strong>${formatDate(med.expDate)}</strong></p>${getMedicationStockHistoryHtml(med)}${actions}</div>`;
+    return `<div class="card"><h3>💊 ${escapeHtml(med.name)} ${badge}</h3><p style="font-size:0.85rem;color:var(--text-muted)">Lab: ${escapeHtml(med.lab)} | Disponível: ${med.qty} ${escapeHtml(med.unit)}${med.packageQty ? ` | Embalagem: ${med.packageQty} ${escapeHtml(med.unit)}` : ''}</p><p style="font-size:0.85rem;margin-top:4px">Validade: <strong>${formatDate(med.expDate)}</strong></p>${getMedicationStockHistoryHtml(med)}${actions}</div>`;
   }).join('');
 }
 
