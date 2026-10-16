@@ -417,7 +417,7 @@ function switchPage(pageId) {
     activeTreatmentTab = 'active';
     renderAdmin();
   }
-  if (pageId === 'config') renderConfig();
+  if (pageId === 'config' || pageId === 'usuario') renderConfig();
 }
 
 async function savePet(event) {

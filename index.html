@@ -94,7 +94,7 @@
   <div id="app-interface" style="display: none;">
     <header>
       <h1 class="brand"><span class="app-logo"><img src="logo_petmeds.svg" width="28" height="28" alt=""></span><span>Pet<span class="brand-accent">Meds</span></span></h1>
-      <button class="btn btn-secondary btn-sm user-chip" onclick="logout()" aria-label="Sair"><span class="header-avatar" id="header-avatar"></span>Sair</button>
+      <button type="button" class="header-avatar-btn" onclick="switchPage('usuario')" aria-label="Meu perfil"><span class="header-avatar" id="header-avatar"></span></button>
     </header>
 
     <main>
@@ -406,9 +406,9 @@
         <div id="treatments-list"></div>
       </section>
 
-      <!-- 5. CONFIGURAÇÕES & FAMÍLIA -->
-      <section id="page-config" class="page">
-        <h2>Configurações</h2>
+      <!-- 5. USUÁRIO -->
+      <section id="page-usuario" class="page">
+        <h2>Usuário</h2>
         
         <!-- PERFIL DO USUÁRIO -->
         <div class="card">
@@ -453,6 +453,13 @@
           </div>
           <button class="btn btn-secondary btn-sm" style="margin-top: 8px;" onclick="testNotification()">Testar Notificação Push</button>
         </div>
+
+        <button type="button" class="btn btn-secondary logout-btn" onclick="logout()">Sair</button>
+      </section>
+
+      <!-- 6. CONFIGURAÇÕES & FAMÍLIA -->
+      <section id="page-config" class="page">
+        <h2>Configurações</h2>
 
         <!-- AMBIENTE FAMÍLIA -->
         <div class="card">
