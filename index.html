@@ -160,7 +160,7 @@
         <button type="button" id="add-pet-button" class="btn" style="margin-bottom:16px" onclick="openPetForm()">Cadastrar Pet</button>
         <div id="pet-modal" class="modal-overlay" style="display:none">
           <div class="modal-content">
-          <h3 id="pet-form-title">Cadastrar Novo Pet</h3>
+          <div class="card-head"><div class="card-avatar">🐾</div><h3 class="card-title" id="pet-form-title">Cadastrar Novo Pet</h3></div>
           <form id="form-pet" onsubmit="savePet(event)">
             <input type="hidden" id="pet-id">
             <div class="form-group">
@@ -231,7 +231,7 @@
         <button type="button" id="add-med-button" class="btn" style="margin-bottom:16px" onclick="openMedicationForm()">Cadastrar Medicamento</button>
         <div id="med-modal" class="modal-overlay" style="display:none">
           <div class="modal-content">
-          <h3 id="med-form-title">Cadastrar Medicamento</h3>
+          <div class="card-head"><div class="card-avatar"><span class="ui-icon" style="--s:28px"><img src="icone_medicamento_petmeds.svg" width="28" height="28" alt=""></span></div><h3 class="card-title" id="med-form-title">Cadastrar Medicamento</h3></div>
           <form id="form-med" onsubmit="saveMedication(event)">
             <input type="hidden" id="med-id">
             <div class="form-group">
@@ -282,7 +282,7 @@
         </div>
         <div id="med-restock-modal" class="modal-overlay" style="display:none">
           <div class="modal-content">
-            <h3 id="med-restock-title">Registrar reposição</h3>
+            <div class="card-head"><div class="card-avatar"><span class="ui-icon" style="--s:28px"><img src="icone_medicamento_petmeds.svg" width="28" height="28" alt=""></span></div><h3 class="card-title" id="med-restock-title">Registrar reposição</h3></div>
             <form id="form-med-restock" onsubmit="saveMedicationRestock(event)">
               <input type="hidden" id="med-restock-id">
               <div class="form-group">
@@ -313,7 +313,7 @@
         <button type="button" id="add-treatment-button" class="btn" style="margin-bottom:16px" onclick="openTreatmentForm()">Novo Tratamento</button>
         <div id="treatment-modal" class="modal-overlay" style="display:none">
           <div class="modal-content">
-          <h3 id="treat-form-title">Novo Tratamento</h3>
+          <div class="card-head"><div class="card-avatar"><span class="ui-icon" style="--s:28px"><img src="icone_tratamento_petmeds.svg" width="28" height="28" alt=""></span></div><h3 class="card-title" id="treat-form-title">Novo Tratamento</h3></div>
           <form id="form-treatment" onsubmit="saveTreatment(event)">
             <input type="hidden" id="treat-id">
             <div class="form-group">

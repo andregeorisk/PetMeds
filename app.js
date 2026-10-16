@@ -11,6 +11,7 @@ let activeTreatmentTab = 'active';
 let pendingDoseConfirmationId = null;
 let activeDayDetailsDate = null;
 let selectedWeekDate = null;
+let activeDoseDetailsId = null;
 let authMode = 'login';
 let userFamilies = [];
 const ACTIVE_FAMILY_KEY = 'petmeds.activeFamilyId';
@@ -1192,7 +1193,7 @@ function renderDoseAdministrationHistory() {
 function renderDoseActions(dose, isViewer) {
   if (isViewer) return '';
   if (dose.status === 'done' || dose.status === 'skipped') return '';
-  return `<div class="btn-group" style="margin-top:10px"><button class="btn btn-sm" onclick="markDose('${dose.id}', 'now')">Dei</button><button class="btn btn-danger btn-sm" onclick="markDose('${dose.id}', 'skip')">Não Dei</button></div>`;
+  return `<div class="card-actions"><button class="btn btn-sm" onclick="markDose('${dose.id}', 'now')">Dei</button><button class="btn btn-danger btn-sm" onclick="markDose('${dose.id}', 'skip')">Não Dei</button></div>`;
 }
 
 function renderDoseCard(dose, isViewer) {
@@ -1204,7 +1205,7 @@ function renderDoseCard(dose, isViewer) {
   const schedule = !dose.treatmentId ? 'Dose única' : treatment?.scheduleMode === 'all_day' ? 'Dia inteiro' : `Prevista: ${dose.scheduledDateTime.substring(11, 16)}${treatment?.scheduleMode === 'window' ? ` (±${treatment.toleranceMinutes} min)` : ''}`;
   const actual = dose.actualDateTime ? ` | Realizada: ${toLocalDateTimeString(new Date(dose.actualDateTime)).substring(11, 16)}` : '';
   const administeredByLabel = administeredBy ? `<p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Administrada por: <strong>${escapeHtml(administeredBy.name)}</strong></p>` : '';
-  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><strong>${schedule} - ${escapeHtml(pet?.name || 'Pet')}</strong>${status}</div><p style="font-size:0.9rem;margin-top:4px">Remédio: <strong>${escapeHtml(med?.name || 'Medicamento')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Dose: ${escapeHtml(dose.treatmentId ? treatment?.dosage || 'Não informada' : 'Única')}${actual}</p>${administeredByLabel}${renderDoseActions(dose, isViewer)}</div>`;
+  return `<div class="card dose-card"><div class="card-head"><div class="card-avatar">${safePhoto(pet?.photo) ? `<img src="${escapeHtml(pet.photo)}" alt="">` : '🐾'}</div><div class="card-head-text">${status}<h3 class="card-title">${escapeHtml(med?.name || 'Medicamento')}</h3></div></div><p class="card-meta">Pet: <strong>${escapeHtml(pet?.name || 'Pet')}</strong></p><p class="card-meta">${schedule}${actual}</p><p class="card-meta">Dose: ${escapeHtml(dose.treatmentId ? treatment?.dosage || 'Não informada' : 'Única')}</p><p class="card-meta">Tratamento: <strong>${dose.treatmentId ? escapeHtml(treatment?.code || '--') : 'Dose única'}</strong></p>${administeredByLabel}${renderDoseActions(dose, isViewer)}</div>`;
 }
 
 async function markDose(doseId, action) {
@@ -1423,10 +1424,10 @@ function renderWeekGrid(range) {
     const pet = db.pets.find(item => item.id === dose.petId);
     const treatment = db.treatments.find(item => item.id === dose.treatmentId);
     const time = treatment?.scheduleMode === 'all_day' ? 'Dia todo' : dose.scheduledDateTime.substring(11, 16);
-    return `<div class="week-dose-row" role="button" tabindex="0" onclick="openDayDetails('${selectedWeekDate}')" onkeydown="if (event.key === 'Enter') openDayDetails('${selectedWeekDate}')"><div><strong>${time}</strong> - ${escapeHtml(medication?.name || 'Medicamento')}<div class="week-dose-pet">${escapeHtml(pet?.name || 'Pet')}</div></div><span class="dose-status">${getDoseStatusIcon(dose)}</span></div>`;
+    return `<div class="week-dose-row" role="button" tabindex="0" onclick="openDoseDetails('${dose.id}')" onkeydown="if (event.key === 'Enter') openDoseDetails('${dose.id}')"><div><strong>${time}</strong> - ${escapeHtml(medication?.name || 'Medicamento')}<div class="week-dose-pet">${escapeHtml(pet?.name || 'Pet')}</div></div><span class="dose-status">${getDoseStatusIcon(dose)}</span></div>`;
   }).join('') : '<p class="week-dose-empty">Nenhuma dose agendada para este dia.</p>';
   document.getElementById('week-label').innerText = currentWeekOffset === 0 ? 'Semana Atual' : `${currentWeekOffset > 0 ? '+' : ''}${currentWeekOffset} Semana(s)`;
-  if (activeDayDetailsDate && document.getElementById('day-details-modal').style.display === 'flex') renderDayDetails();
+  if ((activeDayDetailsDate || activeDoseDetailsId) && document.getElementById('day-details-modal').style.display === 'flex') renderDayDetails();
 }
 
 function openDayDetails(dateString) {
@@ -1435,15 +1436,29 @@ function openDayDetails(dateString) {
   document.getElementById('day-details-modal').style.display = 'flex';
 }
 
+function openDoseDetails(doseId) {
+  activeDayDetailsDate = null;
+  activeDoseDetailsId = doseId;
+  renderDayDetails();
+  document.getElementById('day-details-modal').style.display = 'flex';
+}
+
 function closeDayDetails() {
   activeDayDetailsDate = null;
+  activeDoseDetailsId = null;
   document.getElementById('day-details-modal').style.display = 'none';
 }
 
 function renderDayDetails() {
-  if (!activeDayDetailsDate) return;
   const list = document.getElementById('day-details-list');
   const isViewer = getUserRole() === 'visualizador';
+  if (activeDoseDetailsId) {
+    const dose = db.doses.find(item => item.id === activeDoseDetailsId);
+    document.getElementById('day-details-title').innerText = 'Detalhes da dose';
+    list.innerHTML = dose ? renderDoseCard(dose, isViewer) : '<div class="card"><p style="color:var(--text-muted)">Dose não encontrada.</p></div>';
+    return;
+  }
+  if (!activeDayDetailsDate) return;
   const selectedPetIds = activePetId === 'all' ? new Set(getFamilyPets().map(pet => pet.id)) : new Set([activePetId]);
   const doses = db.doses.filter(dose => selectedPetIds.has(dose.petId) && isTreatmentVisibleInDashboard(dose.treatmentId) && dose.scheduledDateTime.startsWith(activeDayDetailsDate)).sort((left, right) => left.scheduledDateTime.localeCompare(right.scheduledDateTime));
   document.getElementById('day-details-title').innerText = `Detalhes de ${formatDate(activeDayDetailsDate)}`;
