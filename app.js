@@ -287,6 +287,7 @@ function renderApp() {
 
 function updateHeaderInfo() {
   document.getElementById('header-user-name').innerText = currentUser.name;
+  document.getElementById('header-family-name').innerText = currentFamily ? `· Família: ${currentFamily.name}` : '';
   const labels = { admin: 'Admin', cuidador: 'Cuidador', visualizador: 'Visualizador' };
   document.getElementById('header-role-badge').innerText = labels[getUserRole()] || 'Membro';
 }
@@ -737,7 +738,7 @@ async function saveTreatment(event) {
   const endDate = durationType === 'until_date' ? document.getElementById('treat-end-date').value : null;
   if (durationType === 'until_date' && !endDate) return showAlertModal('Data final necessária', 'Informe a data final do tratamento.');
   const intervalDays = intervalUnit === 'day' ? intervalValue : intervalUnit === 'week' ? intervalValue * 7 : intervalUnit === 'month' ? intervalValue * 30 : intervalValue * 365;
-  const values = { pet_id: document.getElementById('treat-pet').value, medication_id: document.getElementById('treat-med').value, dosage: document.getElementById('treat-dosage').value.trim(), times: scheduleMode === 'all_day' ? ['12:00'] : times, disabled_times: scheduleMode === 'all_day' ? [] : disabledTimes, schedule_mode: scheduleMode, tolerance_minutes: toleranceMinutes, start_date: startDate, interval_value: intervalValue, interval_unit: intervalUnit, interval_days: intervalDays, duration_type: durationType, end_date: endDate };
+  const values = { pet_id: document.getElementById('treat-pet').value, medication_id: document.getElementById('treat-med').value, dosage: `${document.getElementById('treat-dosage-qty').value} ${document.getElementById('treat-dosage-unit').value}`, dosage_quantity: Number(document.getElementById('treat-dosage-qty').value), dosage_unit: document.getElementById('treat-dosage-unit').value, times: scheduleMode === 'all_day' ? ['12:00'] : times, disabled_times: scheduleMode === 'all_day' ? [] : disabledTimes, schedule_mode: scheduleMode, tolerance_minutes: toleranceMinutes, start_date: startDate, interval_value: intervalValue, interval_unit: intervalUnit, interval_days: intervalDays, duration_type: durationType, end_date: endDate };
   try {
     if (id) {
       await request(supabaseClient.from('doses').delete().eq('treatment_id', id).in('status', ['pending', 'late']));
@@ -772,7 +773,11 @@ function editTreatment(id) {
   document.getElementById('treat-id').value = treatment.id;
   document.getElementById('treat-pet').value = treatment.petId;
   document.getElementById('treat-med').value = treatment.medId;
-  document.getElementById('treat-dosage').value = treatment.dosage;
+  const legacyDosage = /^([\d.,]+)\s*(.*)$/.exec(treatment.dosage || '');
+  const unitSelect = document.getElementById('treat-dosage-unit');
+  document.getElementById('treat-dosage-qty').value = treatment.dosage_quantity ?? (legacyDosage ? legacyDosage[1].replace(',', '.') : '');
+  const legacyUnit = (legacyDosage?.[2] || '').trim().toLowerCase();
+  unitSelect.value = treatment.dosage_unit || [...unitSelect.options].find(option => option.value.toLowerCase().startsWith(legacyUnit.replace(/s$/, '')) && legacyUnit)?.value || 'comprimido(s)';
   document.getElementById('treat-schedule-mode').value = treatment.scheduleMode;
   document.getElementById('treat-tolerance-minutes').value = String(treatment.toleranceMinutes || 30);
   document.getElementById('treat-start-date').value = treatment.startDate;

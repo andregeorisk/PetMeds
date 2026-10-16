@@ -361,6 +361,11 @@ update public.treatments set code = null where code is null;
 
 create unique index if not exists treatments_code_key on public.treatments (code);
 
+-- Posologia dividida em quantidade e unidade; a coluna dosage continua com o texto composto.
+alter table public.treatments
+  add column if not exists dosage_quantity numeric,
+  add column if not exists dosage_unit text;
+
 grant execute on function public.join_family_by_code(text) to authenticated;
 grant execute on function public.invite_member_by_email(text, text) to authenticated;
 grant execute on function public.delete_pet(uuid) to authenticated;
