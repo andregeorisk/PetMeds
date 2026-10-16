@@ -575,6 +575,17 @@ function resetMedForm() {
   document.getElementById('med-modal').style.display = 'none';
 }
 
+async function toggleMedicationSingleDose(id, enabled) {
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem alterar medicamentos.');
+  try {
+    await request(supabaseClient.from('medications').update({ single_dose: enabled }).eq('id', id));
+    await refreshApp();
+  } catch (error) {
+    showError(error, 'Não foi possível atualizar o medicamento');
+    await refreshApp();
+  }
+}
+
 function toggleBuyDateUnknown(unknown) {
   document.getElementById('med-buy-unknown').checked = unknown;
   const input = document.getElementById('med-buy-date');
@@ -662,7 +673,7 @@ function renderMeds() {
     const category = getMedicationStockCategory(med, today);
     const badge = category === 'expired' ? '<span class="badge badge-danger">FORA DA VALIDADE</span>' : med.expDate <= in30Days ? '<span class="badge badge-warning">VENCE EM BREVE</span>' : '';
     const actions = !isViewer ? `<div class="btn-group" style="margin-top:8px"><button class="btn btn-secondary btn-sm" onclick="editMedication('${med.id}')">Editar</button><button class="btn btn-sm" onclick="openMedicationRestock('${med.id}')">Registrar reposição</button></div>` : '';
-    return `<div class="card"><h3>💊 ${escapeHtml(med.name)} ${badge}</h3><p style="font-size:0.85rem;color:var(--text-muted)">Lab: ${escapeHtml(med.lab)} | Disponível: ${med.qty} ${escapeHtml(med.unit)}${med.packageQty ? ` | Embalagem: ${med.packageQty} ${escapeHtml(med.unit)}` : ''}</p><p style="font-size:0.85rem;margin-top:4px">Validade: <strong>${formatDate(med.expDate)}</strong></p>${getMedicationStockHistoryHtml(med)}${actions}</div>`;
+    return `<div class="card"><h3>💊 ${escapeHtml(med.name)} ${badge}</h3><p style="font-size:0.85rem;color:var(--text-muted)">Lab: ${escapeHtml(med.lab)} | Disponível: ${med.qty} ${escapeHtml(med.unit)}${med.packageQty ? ` | Embalagem: ${med.packageQty} ${escapeHtml(med.unit)}` : ''}</p><p style="font-size:0.85rem;margin-top:4px">Validade: <strong>${formatDate(med.expDate)}</strong></p><label style="display:flex;gap:6px;align-items:center;font-size:0.85rem;margin-top:6px"><input type="checkbox" ${med.singleDose ? 'checked' : ''} ${isViewer ? 'disabled' : ''} onchange="toggleMedicationSingleDose('${med.id}', this.checked)"> Disponível para dose única</label>${getMedicationStockHistoryHtml(med)}${actions}</div>`;
   }).join('');
 }
 
