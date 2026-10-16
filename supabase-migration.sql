@@ -330,6 +330,37 @@ create trigger doses_sync_stock
 after insert or update of status on public.doses
 for each row execute function public.sync_medication_stock_on_dose();
 
+-- Codigo numerico de 8 digitos gerado automaticamente para cada tratamento.
+alter table public.treatments
+  add column if not exists code text;
+
+create or replace function public.assign_treatment_code()
+returns trigger
+language plpgsql
+as $$
+declare
+  candidate text;
+begin
+  if new.code is null then
+    loop
+      candidate := (10000000 + floor(random() * 90000000))::bigint::text;
+      exit when not exists (select 1 from public.treatments where code = candidate);
+    end loop;
+    new.code := candidate;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists treatments_assign_code on public.treatments;
+create trigger treatments_assign_code
+before insert or update on public.treatments
+for each row execute function public.assign_treatment_code();
+
+update public.treatments set code = null where code is null;
+
+create unique index if not exists treatments_code_key on public.treatments (code);
+
 grant execute on function public.join_family_by_code(text) to authenticated;
 grant execute on function public.invite_member_by_email(text, text) to authenticated;
 grant execute on function public.delete_pet(uuid) to authenticated;

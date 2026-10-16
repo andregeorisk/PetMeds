@@ -848,7 +848,7 @@ function renderTreatments() {
     const actions = !isViewer ? `<div class="btn-group" style="flex-wrap:wrap">${statusActions}<button class="btn btn-secondary btn-sm" onclick="editTreatment('${treatment.id}')">Editar</button><button class="btn btn-danger btn-sm" onclick="deleteTreatment('${treatment.id}')">Excluir</button></div>` : '';
     const timeLabels = treatment.times.map(time => `${escapeHtml(time)}${treatment.disabledTimes.includes(time) ? ' (desativado)' : ''}`).join(', ');
     const scheduleLabels = { exact: `Horários: ${timeLabels}`, window: `Horários: ${timeLabels} (±${treatment.toleranceMinutes} min)`, all_day: 'Dia inteiro' };
-    return `<div class="card"><h3>${escapeHtml(pet?.name || 'Pet')} - ${escapeHtml(medication?.name || 'Medicamento')} ${status}</h3><p style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(treatment.dosage)} | ${scheduleLabels[treatment.scheduleMode] || scheduleLabels.exact} | A cada ${treatment.intervalValue} ${unitLabels[treatment.intervalUnit] || 'dia(s)'}</p><p style="font-size:0.85rem;margin-top:4px">Início: ${formatDate(treatment.startDate)} | Duração: ${duration}</p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">${doseCount}</p>${pauseHistory}${actions}</div>`;
+    return `<div class="card"><h3>${escapeHtml(pet?.name || 'Pet')} - ${escapeHtml(medication?.name || 'Medicamento')} ${status}</h3><p style="font-size:0.8rem;color:var(--text-muted)">Código: <strong>${escapeHtml(treatment.code || '--')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(treatment.dosage)} | ${scheduleLabels[treatment.scheduleMode] || scheduleLabels.exact} | A cada ${treatment.intervalValue} ${unitLabels[treatment.intervalUnit] || 'dia(s)'}</p><p style="font-size:0.85rem;margin-top:4px">Início: ${formatDate(treatment.startDate)} | Duração: ${duration}</p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">${doseCount}</p>${pauseHistory}${actions}</div>`;
   }).join('');
 }
 
@@ -1029,18 +1029,26 @@ function renderAdmin() {
   renderTreatments();
 }
 
+function changeDoseHistoryMode() {
+  document.getElementById('dose-history-member').value = 'all';
+  renderDoseAdministrationHistory();
+}
+
 function renderDoseAdministrationHistory() {
-  const memberFilter = document.getElementById('dose-history-member');
+  const isMedicationMode = document.getElementById('dose-history-mode').value === 'medication';
+  const filter = document.getElementById('dose-history-member');
   const history = document.getElementById('dose-administration-history');
-  const selectedUserId = memberFilter.value || 'all';
-  memberFilter.innerHTML = '<option value="all">Todas as pessoas</option>' + db.users.map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name)}</option>`).join('');
-  memberFilter.value = selectedUserId === 'all' || db.users.some(user => user.id === selectedUserId) ? selectedUserId : 'all';
+  const previous = filter.value || 'all';
+  const options = isMedicationMode ? getFamilyMeds().map(med => ({ id: med.id, name: med.name })) : db.users.map(user => ({ id: user.id, name: user.name }));
+  document.getElementById('dose-history-filter-label').innerText = isMedicationMode ? 'Filtrar por medicamento' : 'Filtrar por pessoa';
+  filter.innerHTML = `<option value="all">${isMedicationMode ? 'Todos os medicamentos' : 'Todas as pessoas'}</option>` + options.map(option => `<option value="${escapeHtml(option.id)}">${escapeHtml(option.name)}</option>`).join('');
+  filter.value = previous === 'all' || options.some(option => option.id === previous) ? previous : 'all';
 
   const doses = db.doses
-    .filter(dose => dose.status === 'done' && dose.administeredById && (memberFilter.value === 'all' || dose.administeredById === memberFilter.value))
+    .filter(dose => dose.status === 'done' && dose.administeredById && (filter.value === 'all' || (isMedicationMode ? dose.medId : dose.administeredById) === filter.value))
     .sort((left, right) => new Date(right.actualDateTime) - new Date(left.actualDateTime));
   if (!doses.length) {
-    history.innerHTML = '<div class="card"><p style="color:var(--text-muted)">Nenhuma administração registrada para esta pessoa.</p></div>';
+    history.innerHTML = `<div class="card"><p style="color:var(--text-muted)">Nenhuma administração registrada${isMedicationMode ? ' para este medicamento' : ' para esta pessoa'}.</p></div>`;
     return;
   }
 
@@ -1048,10 +1056,13 @@ function renderDoseAdministrationHistory() {
     const pet = db.pets.find(item => item.id === dose.petId);
     const medication = db.medications.find(item => item.id === dose.medId);
     const member = db.users.find(item => item.id === dose.administeredById);
+    const treatment = db.treatments.find(item => item.id === dose.treatmentId);
     const actualAt = new Date(dose.actualDateTime);
     const date = formatDate(toLocalDateString(actualAt));
     const time = toLocalDateTimeString(actualAt).substring(11, 16);
-    return `<div class="card"><h4>${escapeHtml(medication?.name || 'Medicamento')}</h4><p style="font-size:0.85rem;color:var(--text-muted)">Pet: <strong>${escapeHtml(pet?.name || 'Pet')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Administrado por: <strong>${escapeHtml(member?.name || 'Membro')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Data e horário: <strong>${date} às ${time}</strong></p></div>`;
+    const muted = 'font-size:0.85rem;color:var(--text-muted);margin-top:4px';
+    const treatmentLine = isMedicationMode ? `<p style="${muted}">Tratamento: <strong>${dose.treatmentId ? escapeHtml(treatment?.code || '--') : 'Dose única'}</strong></p>` : '';
+    return `<div class="card"><h4>${escapeHtml(medication?.name || 'Medicamento')}</h4><p style="${muted}">Pet: <strong>${escapeHtml(pet?.name || 'Pet')}</strong></p><p style="${muted}">Administrado por: <strong>${escapeHtml(member?.name || 'Membro')}</strong></p><p style="${muted}">Data e horário: <strong>${date} às ${time}</strong></p>${treatmentLine}</div>`;
   }).join('');
 }
 
