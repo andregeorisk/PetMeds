@@ -1061,7 +1061,7 @@ function renderDoseAdministrationHistory() {
     const date = formatDate(toLocalDateString(actualAt));
     const time = toLocalDateTimeString(actualAt).substring(11, 16);
     const muted = 'font-size:0.85rem;color:var(--text-muted);margin-top:4px';
-    const treatmentLine = isMedicationMode ? `<p style="${muted}">Tratamento: <strong>${dose.treatmentId ? escapeHtml(treatment?.code || '--') : 'Dose única'}</strong></p>` : '';
+    const treatmentLine = `<p style="${muted}">Tratamento: <strong>${dose.treatmentId ? escapeHtml(treatment?.code || '--') : 'Dose única'}</strong></p>`;
     return `<div class="card"><h4>${escapeHtml(medication?.name || 'Medicamento')}</h4><p style="${muted}">Pet: <strong>${escapeHtml(pet?.name || 'Pet')}</strong></p><p style="${muted}">Administrado por: <strong>${escapeHtml(member?.name || 'Membro')}</strong></p><p style="${muted}">Data e horário: <strong>${date} às ${time}</strong></p>${treatmentLine}</div>`;
   }).join('');
 }
