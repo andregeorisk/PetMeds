@@ -93,17 +93,7 @@
   <!-- APP MAIN INTERFACE -->
   <div id="app-interface" style="display: none;">
     <header>
-      <div>
-        <h1 style="margin:0; font-size: 1.1rem; display: flex; align-items: center; gap: 6px;"><span class="app-logo"><img src="logo_petmeds.svg" width="28" height="28" alt=""></span>PetMeds</h1>
-        <div class="user-info-bar">
-          <span id="header-user-name">Usuário</span> 
-          <span id="header-role-badge" class="role-badge">Admin</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 4px; font-weight: bold; font-style: italic; font-size: 0.8rem; color: var(--text-muted);">
-          <span>Família:</span>
-          <select id="header-family-select" onchange="switchFamily(this.value)" aria-label="Família ativa" style="font: inherit; color: inherit; background: transparent; border: none; max-width: 55vw;"></select>
-        </div>
-      </div>
+      <h1 class="brand"><span class="app-logo"><img src="logo_petmeds.svg" width="28" height="28" alt=""></span><span>Pet<span class="brand-accent">Meds</span></span></h1>
       <button class="btn btn-secondary btn-sm" onclick="logout()">Sair</button>
     </header>
 
@@ -111,6 +101,14 @@
       <div id="access-blocked-banner" class="card" style="display: none;"></div>
       <!-- 1. DASHBOARD -->
       <section id="page-dashboard" class="page active">
+        <div class="greeting">
+          <h2 id="header-user-name">Olá!</h2>
+          <div class="greeting-meta">
+            <span>Família:</span>
+            <select id="header-family-select" onchange="switchFamily(this.value)" aria-label="Família ativa" style="font: inherit; font-weight: 600; color: var(--text-main); background: transparent; border: none; max-width: 55vw;"></select>
+            <span id="header-role-badge" class="role-badge">Admin</span>
+          </div>
+        </div>
         <div class="pet-tabs" id="dash-pet-tabs"></div>
         <div class="kpi-container">
           <div class="kpi-card">

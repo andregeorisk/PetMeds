@@ -309,7 +309,7 @@ function renderApp() {
 }
 
 function updateHeaderInfo() {
-  document.getElementById('header-user-name').innerText = currentUser.name;
+  document.getElementById('header-user-name').innerText = `Olá, ${currentUser.name.split(' ')[0]}!`;
   const familySelect = document.getElementById('header-family-select');
   familySelect.innerHTML = userFamilies.map(family => `<option value="${escapeHtml(family.id)}">${escapeHtml(family.name)}</option>`).join('');
   familySelect.value = currentFamily?.id || '';
