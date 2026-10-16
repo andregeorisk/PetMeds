@@ -520,6 +520,12 @@ grant execute on function public.delete_family(uuid) to authenticated;
 grant execute on function public.caregiver_restriction(uuid) to authenticated;
 grant execute on function public.pet_caregiver_restriction(uuid) to authenticated;
 
+-- Fotos (data URL JPEG 256x256 gerada no navegador) de pets e usuarios.
+alter table public.pets
+  add column if not exists photo text;
+alter table public.profiles
+  add column if not exists photo text;
+
 grant execute on function public.join_family_by_code(text) to authenticated;
 grant execute on function public.invite_member_by_email(text, text) to authenticated;
 grant execute on function public.delete_pet(uuid) to authenticated;

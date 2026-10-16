@@ -164,6 +164,19 @@
           <form id="form-pet" onsubmit="savePet(event)">
             <input type="hidden" id="pet-id">
             <div class="form-group">
+              <label>Foto</label>
+              <div class="photo-field-row">
+                <div class="card-avatar" id="pet-photo-preview">🐾</div>
+                <div class="photo-field-actions">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('pet-photo-camera').click()">Tirar foto</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('pet-photo-file').click()">Escolher da galeria</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="clearPhoto('pet')">Remover</button>
+                </div>
+              </div>
+              <input type="file" id="pet-photo-camera" accept="image/*" capture="environment" hidden onchange="handlePhotoInput(event, 'pet')">
+              <input type="file" id="pet-photo-file" accept="image/*" hidden onchange="handlePhotoInput(event, 'pet')">
+            </div>
+            <div class="form-group">
               <label>Nome</label>
               <input type="text" id="pet-name" class="form-control" required>
             </div>
@@ -403,6 +416,19 @@
         <div class="card">
           <h3>Meu Perfil</h3>
           <form onsubmit="handleUpdateProfile(event)">
+            <div class="form-group">
+              <label>Foto</label>
+              <div class="photo-field-row">
+                <div class="card-avatar" id="profile-photo-preview"></div>
+                <div class="photo-field-actions">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('profile-photo-camera').click()">Tirar foto</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('profile-photo-file').click()">Escolher da galeria</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="clearPhoto('profile')">Remover</button>
+                </div>
+              </div>
+              <input type="file" id="profile-photo-camera" accept="image/*" capture="user" hidden onchange="handlePhotoInput(event, 'profile')">
+              <input type="file" id="profile-photo-file" accept="image/*" hidden onchange="handlePhotoInput(event, 'profile')">
+            </div>
             <div class="form-group">
               <label>Nome</label>
               <input type="text" id="profile-name" class="form-control" required>

@@ -243,7 +243,14 @@
 
     /* CARDS (estilo padrão) */
     .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-    .card-avatar { width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--primary); background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; }
+    .card-avatar { width: 56px; height: 56px; flex-shrink: 0; overflow: hidden; border-radius: 50%; border: 2px solid var(--primary); background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; }
+    .card-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .tab-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; margin-right: 6px; vertical-align: middle; }
+    .member-info { display: flex; align-items: center; gap: 10px; }
+    .member-avatar { width: 36px; height: 36px; flex-shrink: 0; overflow: hidden; border-radius: 50%; border: 2px solid var(--primary); background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; }
+    .member-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-field-row { display: flex; align-items: center; gap: 12px; }
+    .photo-field-actions { display: flex; flex-wrap: wrap; gap: 6px; }
     .card-head-text { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
     .card-title { margin: 0; font-size: 1.2rem; font-weight: 700; overflow-wrap: anywhere; }
     .card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.85rem; color: var(--text-muted); }

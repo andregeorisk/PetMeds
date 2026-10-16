@@ -62,6 +62,63 @@ function uiIcon(file, size = 16) {
   return `<span class="ui-icon" style="--s:${size}px"><img src="${file}" width="${size}" height="${size}" alt=""></span>`;
 }
 
+function safePhoto(photo) {
+  return typeof photo === 'string' && photo.startsWith('data:image/') ? photo : null;
+}
+
+function resizeImageFile(file, size = 256) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const side = Math.min(image.width, image.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      canvas.getContext('2d').drawImage(image, (image.width - side) / 2, (image.height - side) / 2, side, side, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.8));
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Não foi possível ler a imagem selecionada.'));
+    };
+    image.src = url;
+  });
+}
+
+// undefined = foto inalterada, null = remover, string = nova foto
+const pendingPhotos = { pet: undefined, profile: undefined };
+
+function photoFallback(target) {
+  return target === 'pet' ? '🐾' : escapeHtml((currentUser?.name || '?').charAt(0).toUpperCase());
+}
+
+function renderPhotoPreview(target, photo) {
+  const preview = document.getElementById(`${target}-photo-preview`);
+  preview.innerHTML = safePhoto(photo) ? `<img src="${escapeHtml(photo)}" alt="">` : photoFallback(target);
+}
+
+async function handlePhotoInput(event, target) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  try {
+    pendingPhotos[target] = await resizeImageFile(file);
+    renderPhotoPreview(target, pendingPhotos[target]);
+  } catch (error) { showError(error, 'Foto inválida'); }
+}
+
+function clearPhoto(target) {
+  pendingPhotos[target] = null;
+  renderPhotoPreview(target, null);
+}
+
+function memberAvatar(user) {
+  const photo = safePhoto(user?.photo);
+  return `<div class="member-avatar">${photo ? `<img src="${escapeHtml(photo)}" alt="">` : escapeHtml((user?.name || '?').charAt(0).toUpperCase())}</div>`;
+}
+
 function showAlertModal(title, message) {
   document.getElementById('alert-title').innerText = title;
   document.getElementById('alert-message').innerText = message;
@@ -112,8 +169,8 @@ async function loadRemoteData() {
   const { data: userData, error: userError } = await supabaseClient.auth.getUser();
   if (userError) throw userError;
   const authUser = userData.user;
-  const profile = await request(supabaseClient.from('profiles').select('id, name, receive_email_notif').eq('id', authUser.id).single());
-  currentUser = { id: authUser.id, name: profile.name, email: authUser.email, receiveEmailNotif: profile.receive_email_notif };
+  const profile = await request(supabaseClient.from('profiles').select('id, name, receive_email_notif, photo').eq('id', authUser.id).single());
+  currentUser = { id: authUser.id, name: profile.name, email: authUser.email, receiveEmailNotif: profile.receive_email_notif, photo: profile.photo };
 
   const memberships = await request(supabaseClient.from('family_members').select('family_id, role, receive_email, starts_on, ends_on, families(id, name, code, admin_id)').eq('user_id', authUser.id));
   if (!memberships.length) {
@@ -134,7 +191,7 @@ async function loadRemoteData() {
   }
   const [members, profiles, pets, weights, medications, treatments, doses] = await Promise.all([
     request(supabaseClient.from('family_members').select('family_id, user_id, role, receive_email, starts_on, ends_on').eq('family_id', family.id)),
-    request(supabaseClient.from('profiles').select('id, name')),
+    request(supabaseClient.from('profiles').select('id, name, photo')),
     request(supabaseClient.from('pets').select('*').eq('family_id', family.id).order('name')),
     request(supabaseClient.from('weight_records').select('*').order('recorded_at')),
     request(supabaseClient.from('medications').select('*').eq('family_id', family.id).order('name')),
@@ -161,6 +218,7 @@ async function loadRemoteData() {
   db.users = members.map(member => ({
     id: member.user_id,
     name: profileById.get(member.user_id)?.name || 'Membro',
+    photo: profileById.get(member.user_id)?.photo || null,
     email: member.user_id === currentUser.id ? currentUser.email : '',
     receiveEmailNotif: member.user_id === currentUser.id ? currentUser.receiveEmailNotif : true
   }));
@@ -275,7 +333,7 @@ async function handleUpdateProfile(event) {
   const email = document.getElementById('profile-email').value.trim().toLowerCase();
   const password = document.getElementById('profile-pass').value;
   try {
-    await request(supabaseClient.from('profiles').update({ name }).eq('id', currentUser.id));
+    await request(supabaseClient.from('profiles').update(pendingPhotos.profile !== undefined ? { name, photo: pendingPhotos.profile } : { name }).eq('id', currentUser.id));
     const authChanges = {};
     if (email !== currentUser.email) authChanges.email = email;
     if (password) authChanges.password = password;
@@ -374,6 +432,7 @@ async function savePet(event) {
     donated_at: status === 'donated' ? document.getElementById('pet-donated-date').value || existingPet?.donatedAt || (!existingPet || existingPet.status !== 'donated' ? toLocalDateString() : null) : existingPet?.donatedAt || null,
     deceased_at: status === 'deceased' ? document.getElementById('pet-deceased-date').value || existingPet?.deceasedAt || (!existingPet || existingPet.status !== 'deceased' ? toLocalDateString() : null) : existingPet?.deceasedAt || null
   };
+  if (pendingPhotos.pet !== undefined) values.photo = pendingPhotos.pet;
   try {
     if (id) await request(supabaseClient.from('pets').update(values).eq('id', id));
     else await request(supabaseClient.from('pets').insert({ ...values, family_id: currentFamily.id }));
@@ -401,6 +460,8 @@ function editPet(id) {
   document.getElementById('pet-status').disabled = pet.status === 'deceased';
   document.getElementById('pet-status-help').innerText = pet.status === 'deceased' ? 'Pets falecidos não podem ser reativados.' : 'Pets doados ou perdidos podem voltar para Ativo.';
   togglePetStatusDates(pet.status);
+  pendingPhotos.pet = undefined;
+  renderPhotoPreview('pet', pet.photo);
   document.getElementById('pet-form-title').innerText = 'Editar Pet';
   document.getElementById('pet-modal').style.display = 'flex';
 }
@@ -413,6 +474,8 @@ function resetPetForm() {
   document.getElementById('pet-deceased-date').value = '';
   document.getElementById('pet-status-help').innerText = '';
   togglePetStatusDates('active');
+  pendingPhotos.pet = undefined;
+  renderPhotoPreview('pet', null);
   document.getElementById('pet-form-title').innerText = 'Cadastrar Novo Pet';
   document.getElementById('pet-modal').style.display = 'none';
 }
@@ -466,7 +529,7 @@ function renderPets() {
     const statusDate = status === 'donated' ? `<p style="font-size:0.85rem;margin-top:4px">Data da doação: <strong>${pet.donatedAt ? formatDate(pet.donatedAt) : 'Não registrada'}</strong></p>` : status === 'deceased' ? `<p style="font-size:0.85rem;margin-top:4px">Data do falecimento: <strong>${pet.deceasedAt ? formatDate(pet.deceasedAt) : 'Não registrada'}</strong></p>` : '';
     const activeTreatments = db.treatments.filter(treatment => treatment.petId === pet.id && !treatment.pausedAt && !isTreatmentFinished(treatment));
     const treatmentsHtml = activeTreatments.length ? `<div class="card-section-label">Tratamentos Ativos:</div><div class="chip-list">${activeTreatments.map(treatment => `<span class="chip">${uiIcon('icone_medicamento_petmeds.svg', 14)}${escapeHtml(treatment.code || '--')} · ${escapeHtml(db.medications.find(med => med.id === treatment.medId)?.name || 'Medicamento')}</span>`).join('')}</div>` : '';
-    return `<div class="card pet-card" onclick="openWeightModal('${pet.id}')"><div class="card-head"><div class="card-avatar">${icon}</div><div class="card-head-text"><span class="badge ${statusClasses[status] || 'badge'}">${statusLabels[status] || 'Ativo'}</span><h3 class="card-title">${escapeHtml(pet.name)}</h3></div></div><p class="card-meta">Espécie: ${escapeHtml(pet.species)} • ${UI_ICONS.calendar} Nasc.: ${formatDate(pet.birth)}</p>${statusDate}<p class="card-weight weight-summary">${UI_ICONS.scale} ${lastWeight ? `Peso: ${lastWeight.weight} kg <small>(${formatDate(lastWeight.date)})</small>` : 'Peso não registrado'}</p>${treatmentsHtml}<div class="card-actions" onclick="event.stopPropagation()"><button class="btn btn-secondary btn-sm" onclick="openWeightModal('${pet.id}')">${UI_ICONS.scale} Histórico de Peso</button>${!isViewer ? `<button class="btn btn-secondary btn-sm" onclick="editPet('${pet.id}')">${UI_ICONS.edit} Editar</button><button class="btn btn-danger btn-sm" onclick="deletePet('${pet.id}')">${UI_ICONS.trash} Excluir</button>` : ''}</div></div>`;
+    return `<div class="card pet-card" onclick="openWeightModal('${pet.id}')"><div class="card-head"><div class="card-avatar">${safePhoto(pet.photo) ? `<img src="${escapeHtml(pet.photo)}" alt="">` : icon}</div><div class="card-head-text"><span class="badge ${statusClasses[status] || 'badge'}">${statusLabels[status] || 'Ativo'}</span><h3 class="card-title">${escapeHtml(pet.name)}</h3></div></div><p class="card-meta">Espécie: ${escapeHtml(pet.species)} • ${UI_ICONS.calendar} Nasc.: ${formatDate(pet.birth)}</p>${statusDate}<p class="card-weight weight-summary">${UI_ICONS.scale} ${lastWeight ? `Peso: ${lastWeight.weight} kg <small>(${formatDate(lastWeight.date)})</small>` : 'Peso não registrado'}</p>${treatmentsHtml}<div class="card-actions" onclick="event.stopPropagation()"><button class="btn btn-secondary btn-sm" onclick="openWeightModal('${pet.id}')">${UI_ICONS.scale} Histórico de Peso</button>${!isViewer ? `<button class="btn btn-secondary btn-sm" onclick="editPet('${pet.id}')">${UI_ICONS.edit} Editar</button><button class="btn btn-danger btn-sm" onclick="deletePet('${pet.id}')">${UI_ICONS.trash} Excluir</button>` : ''}</div></div>`;
   }).join('');
 }
 
@@ -1298,7 +1361,7 @@ function renderDashboard() {
     return;
   }
   if (activePetId !== 'all' && !pets.some(pet => pet.id === activePetId)) activePetId = pets[0].id;
-  tabs.innerHTML = `<div class="pet-tab ${activePetId === 'all' ? 'active' : ''}" onclick="selectDashPet('all')">Todos</div>${pets.map(pet => `<div class="pet-tab ${pet.id === activePetId ? 'active' : ''}" onclick="selectDashPet('${pet.id}')">${escapeHtml(pet.name)}</div>`).join('')}`;
+  tabs.innerHTML = `<div class="pet-tab ${activePetId === 'all' ? 'active' : ''}" onclick="selectDashPet('all')">Todos</div>${pets.map(pet => `<div class="pet-tab ${pet.id === activePetId ? 'active' : ''}" onclick="selectDashPet('${pet.id}')">${safePhoto(pet.photo) ? `<img class="tab-avatar" src="${escapeHtml(pet.photo)}" alt="">` : ''}${escapeHtml(pet.name)}</div>`).join('')}`;
   const pet = pets.find(item => item.id === activePetId);
   const range = getWeekDateRange(currentWeekOffset);
   const selectedPetIds = activePetId === 'all' ? new Set(getFamilyPets().map(item => item.id)) : new Set([activePetId]);
@@ -1390,6 +1453,8 @@ function renderDayDetails() {
 function renderConfig() {
   renderFamilySection();
   document.getElementById('profile-name').value = currentUser.name;
+  pendingPhotos.profile = undefined;
+  renderPhotoPreview('profile', currentUser.photo);
   document.getElementById('profile-email').value = currentUser.email;
   document.getElementById('email-notif-user').checked = currentUser.receiveEmailNotif;
 }
@@ -1406,7 +1471,7 @@ function renderFamilySection() {
     const periodInfo = isTemporary ? `<br><span style="font-size:0.75rem;color:var(--text-muted)">${stateLabels[state]} | Período: ${member.startsOn ? formatDate(member.startsOn) : 'sem início'} a ${member.endsOn ? formatDate(member.endsOn) : 'sem fim'}</span>` : '';
     const periodControls = isTemporary ? `<div style="display:flex;gap:4px;margin-top:4px"><input type="date" class="form-control" style="font-size:0.75rem;padding:4px" id="member-start-${member.userId}" value="${member.startsOn || ''}" aria-label="Data de início"><input type="date" class="form-control" style="font-size:0.75rem;padding:4px" id="member-end-${member.userId}" value="${member.endsOn || ''}" aria-label="Data final"></div><button class="btn btn-secondary btn-sm" style="margin-top:4px;padding:2px 6px" onclick="updateMemberPeriod('${member.userId}')">${state === 'expired' ? 'Reativar com este período' : 'Salvar período'}</button> ` : '';
     const controls = isAdmin && member.userId !== currentUser.id ? `<div><select class="form-control" style="font-size:0.75rem;padding:4px" onchange="updateMemberRole('${member.userId}', this.value)"><option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option><option value="cuidador" ${member.role === 'cuidador' ? 'selected' : ''}>Cuidador</option><option value="cuidador_temporario" ${isTemporary ? 'selected' : ''}>Cuidador temporário</option><option value="visualizador" ${member.role === 'visualizador' ? 'selected' : ''}>Visualizador</option></select>${periodControls}<button class="btn btn-danger btn-sm" style="margin-top:4px;padding:2px 6px" onclick="removeMember('${member.userId}')">Remover</button></div>` : '';
-    return `<div class="list-item"><div><strong>${escapeHtml(user?.name || 'Membro')}</strong><br><span style="font-size:0.75rem;color:var(--text-muted)">Função: ${roleLabels[member.role] || member.role}</span>${periodInfo}</div>${controls}</div>`;
+    return `<div class="list-item"><div class="member-info">${memberAvatar(user)}<div><strong>${escapeHtml(user?.name || 'Membro')}</strong><br><span style="font-size:0.75rem;color:var(--text-muted)">Função: ${roleLabels[member.role] || member.role}</span>${periodInfo}</div></div>${controls}</div>`;
   }).join('');
   const controls = isAdmin ? `<div style="margin-top:16px;border-top:1px solid var(--border-color);padding-top:12px"><h4>Código de convite da família</h4><div class="code-box">${escapeHtml(currentFamily.code)}</div><h4 style="margin-top:16px">Convidar por e-mail</h4><form onsubmit="inviteMemberByEmail(event)"><div class="form-group"><input type="email" id="invite-email" class="form-control" placeholder="E-mail do usuário cadastrado" required></div><div class="form-group"><select id="invite-role" class="form-control" onchange="toggleInvitePeriod(this.value)"><option value="cuidador">Cuidador</option><option value="cuidador_temporario">Cuidador temporário (só administra doses)</option><option value="visualizador">Visualizador</option><option value="admin">Administrador</option></select></div><div id="invite-period" style="display:none"><div class="form-group"><label>Início do acesso</label><input type="date" id="invite-starts-on" class="form-control"></div><div class="form-group"><label>Fim do acesso</label><input type="date" id="invite-ends-on" class="form-control"></div></div><button type="submit" class="btn btn-sm">Adicionar por e-mail</button></form><form onsubmit="handleRenameFamily(event)" style="margin-top:16px"><div class="form-group"><label>Nome do grupo/família</label><input type="text" id="family-name-input" class="form-control" value="${escapeHtml(currentFamily.name)}" required></div><button type="submit" class="btn btn-secondary btn-sm">Renomear família</button></form><button class="btn btn-danger btn-sm" style="margin-top:12px" onclick="handleDeleteFamily()">Excluir família completa</button></div>` : '';
   container.innerHTML = `<p><strong>Nome do grupo:</strong> ${escapeHtml(currentFamily.name)}</p><h4 style="margin-top:12px">Membros participantes:</h4>${members}${controls}`;
