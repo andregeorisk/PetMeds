@@ -274,6 +274,7 @@
     }
 
     .nav-btn.active { color: var(--primary); font-weight: bold; }
+    .nav-icon { width: 24px; height: 24px; background-color: currentColor; -webkit-mask: var(--icon) no-repeat center / contain; mask: var(--icon) no-repeat center / contain; }
 
     .nav-btn.dash-btn {
       background: var(--primary);
