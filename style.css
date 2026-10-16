@@ -213,7 +213,8 @@
     .kpi-label { font-size: 0.7rem; color: var(--text-muted); }
 
     .week-carousel { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .app-logo { width: 28px; height: 28px; flex-shrink: 0; background-color: var(--primary); -webkit-mask: url(logo_petmeds.svg) no-repeat center / contain; mask: url(logo_petmeds.svg) no-repeat center / contain; }
+    .app-logo { width: 28px; height: 28px; flex-shrink: 0; overflow: hidden; display: block; color: var(--primary); }
+    .app-logo img { width: 28px; height: 28px; object-fit: contain; display: block; transform: translateX(-28px); filter: drop-shadow(28px 0 0 currentColor); }
     body.restricted-caregiver #page-pets > *, body.restricted-caregiver #page-remedios > *, body.restricted-caregiver #page-admin > *, body.access-blocked #page-dashboard > *, body.access-blocked #page-pets > *, body.access-blocked #page-remedios > *, body.access-blocked #page-admin > * { display: none !important; }
     body.restricted-caregiver #page-pets::after, body.restricted-caregiver #page-remedios::after, body.restricted-caregiver #page-admin::after, body.access-blocked #page-dashboard::after, body.access-blocked #page-pets::after, body.access-blocked #page-remedios::after, body.access-blocked #page-admin::after { content: 'Nenhum conteúdo disponível para o seu acesso.'; color: var(--text-muted); display: block; padding: 16px 0; }
     .dashboard-week-card { min-height: 180px; height: auto; margin-bottom: 0; display: flex; flex-direction: column; }
@@ -274,7 +275,8 @@
     }
 
     .nav-btn.active { color: var(--primary); font-weight: bold; }
-    .nav-icon { width: 24px; height: 24px; background-color: currentColor; -webkit-mask: var(--icon) no-repeat center / contain; mask: var(--icon) no-repeat center / contain; }
+    .nav-icon { width: 24px; height: 24px; overflow: hidden; display: block; }
+    .nav-icon img { width: 24px; height: 24px; object-fit: contain; display: block; transform: translateX(-24px); filter: drop-shadow(24px 0 0 currentColor); }
 
     .nav-btn.dash-btn {
       background: var(--primary);
