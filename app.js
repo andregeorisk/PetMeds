@@ -1154,6 +1154,15 @@ function renderAdmin() {
   renderTreatments();
 }
 
+function setDoseHistoryMode(mode) {
+  document.getElementById('dose-history-mode').value = mode;
+  document.querySelectorAll('[data-history-mode]').forEach(button => {
+    button.classList.toggle('active', button.dataset.historyMode === mode);
+    button.setAttribute('aria-selected', String(button.dataset.historyMode === mode));
+  });
+  changeDoseHistoryMode();
+}
+
 function changeDoseHistoryMode() {
   document.getElementById('dose-history-member').value = 'all';
   renderDoseAdministrationHistory();
@@ -1186,8 +1195,8 @@ function renderDoseAdministrationHistory() {
     const date = formatDate(toLocalDateString(actualAt));
     const time = toLocalDateTimeString(actualAt).substring(11, 16);
     const muted = 'font-size:0.85rem;color:var(--text-muted);margin-top:4px';
-    const treatmentLine = `<p style="${muted}">Tratamento: <strong>${dose.treatmentId ? escapeHtml(treatment?.code || '--') : 'Dose única'}</strong></p>`;
-    return `<div class="card"><h4>${escapeHtml(medication?.name || 'Medicamento')}</h4><p style="${muted}">Pet: <strong>${escapeHtml(pet?.name || 'Pet')}</strong></p><p style="${muted}">Administrado por: <strong>${escapeHtml(member?.name || 'Membro')}</strong></p><p style="${muted}">Data e horário: <strong>${date} às ${time}</strong></p>${treatmentLine}</div>`;
+    const treatmentLine = `<p class="card-meta">Tratamento: <strong>${dose.treatmentId ? escapeHtml(treatment?.code || '--') : 'Dose única'}</strong></p>`;
+    return `<div class="card"><div class="card-head"><div class="card-avatar">${safePhoto(pet?.photo) ? `<img src="${escapeHtml(pet.photo)}" alt="">` : '🐾'}</div><div class="card-head-text"><span class="badge badge-success">Administrada</span><h3 class="card-title">${escapeHtml(medication?.name || 'Medicamento')}</h3></div></div><p class="card-meta">Pet: <strong>${escapeHtml(pet?.name || 'Pet')}</strong></p><p class="card-meta">Administrado por: <strong>${escapeHtml(member?.name || 'Membro')}</strong></p><p class="card-meta">${UI_ICONS.calendar} Data e horário: <strong>${date} às ${time}</strong></p>${treatmentLine}</div>`;
   }).join('');
 }
 

@@ -135,13 +135,11 @@
           <div class="week-grid" id="week-grid"></div>
           <div id="week-dose-list"></div>
         </div>
-        <h3 style="margin-top:18px">Histórico de administrações</h3>
-        <div class="form-group">
-          <label for="dose-history-mode">Histórico por</label>
-          <select id="dose-history-mode" class="form-control" onchange="changeDoseHistoryMode()">
-            <option value="person">Pessoa</option>
-            <option value="medication">Medicamento</option>
-          </select>
+        <h2 class="section-title">Histórico de administrações</h2>
+        <input type="hidden" id="dose-history-mode" value="person">
+        <div class="pet-tabs" id="dose-history-mode-tabs" role="tablist" aria-label="Histórico por">
+          <button type="button" class="pet-tab active" data-history-mode="person" role="tab" aria-selected="true" onclick="setDoseHistoryMode('person')">Pessoa</button>
+          <button type="button" class="pet-tab" data-history-mode="medication" role="tab" aria-selected="false" onclick="setDoseHistoryMode('medication')">Medicamento</button>
         </div>
         <div class="form-group">
           <label for="dose-history-member" id="dose-history-filter-label">Filtrar por pessoa</label>

@@ -275,9 +275,10 @@
     /* BOT\u00d5ES DE CADASTRO E ABAS SEGMENTADAS */
     #add-pet-button, #add-med-button, #add-treatment-button { border-radius: 999px; padding: 14px 16px; font-size: 1rem; background: linear-gradient(135deg, var(--primary-hover), var(--primary)); box-shadow: 0 6px 16px var(--primary-light); }
     #add-pet-button::before, #add-med-button::before, #add-treatment-button::before { content: '+'; font-size: 1.3rem; line-height: 1; margin-right: 8px; }
-    #pet-status-tabs, #medication-stock-tabs, .treatment-tabs { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 999px; padding: 4px; gap: 4px; width: 100%; overflow: hidden; }
-    #pet-status-tabs .pet-tab, #medication-stock-tabs .pet-tab, .treatment-tabs .pet-tab, .treatment-tab { flex: 1 1 0; text-align: center; background: transparent; border-color: transparent; border-radius: 999px; box-shadow: none; }
-    #pet-status-tabs .pet-tab.active, #medication-stock-tabs .pet-tab.active, .treatment-tabs .pet-tab.active, .treatment-tab.active { background: var(--primary-light); color: var(--primary); border-color: transparent; font-weight: 600; }
+    #pet-status-tabs, #medication-stock-tabs, .treatment-tabs, #dose-history-mode-tabs { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 999px; padding: 4px; gap: 4px; width: 100%; overflow: hidden; }
+    #pet-status-tabs .pet-tab, #medication-stock-tabs .pet-tab, .treatment-tabs .pet-tab, #dose-history-mode-tabs .pet-tab, .treatment-tab { flex: 1 1 0; text-align: center; background: transparent; border-color: transparent; border-radius: 999px; box-shadow: none; }
+    #pet-status-tabs .pet-tab.active, #medication-stock-tabs .pet-tab.active, .treatment-tabs .pet-tab.active, #dose-history-mode-tabs .pet-tab.active, .treatment-tab.active { background: var(--primary-light); color: var(--primary); border-color: transparent; font-weight: 600; }
+    .section-title { margin: 20px 0 12px; font-size: 1.2rem; font-weight: 700; }
 
     /* LISTS & BADGES */
     .list-item {
