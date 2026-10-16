@@ -1202,7 +1202,7 @@ function renderDoseAdministrationHistory() {
 
 function renderDoseActions(dose, isViewer) {
   if (isViewer) return '';
-  if (dose.status === 'done' || dose.status === 'skipped') return '';
+  if (dose.status === 'done' || dose.status === 'skipped') return `<div class="card-actions"><button class="btn btn-secondary btn-sm" onclick="openDoseEdit('${dose.id}')">${UI_ICONS.edit} Alterar registro</button><button class="btn btn-secondary btn-sm" onclick="undoDose('${dose.id}')">Desfazer</button></div>`;
   return `<div class="card-actions"><button class="btn btn-sm" onclick="markDose('${dose.id}', 'now')">Dei</button><button class="btn btn-danger btn-sm" onclick="markDose('${dose.id}', 'skip')">Não Dei</button></div>`;
 }
 
