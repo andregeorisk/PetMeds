@@ -6,6 +6,12 @@ drop policy if exists "family admins update family" on public.families;
 alter table public.doses
   add column if not exists administered_by uuid references public.profiles(id) on delete set null;
 
+alter table public.doses
+  alter column treatment_id drop not null;
+
+alter table public.medications
+  alter column bought_at drop not null;
+
 alter table public.treatments
   add column if not exists paused_at timestamptz,
   add column if not exists finished_at timestamptz,

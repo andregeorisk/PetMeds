@@ -526,7 +526,7 @@ async function saveMedication(event) {
   event.preventDefault();
   if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem alterar medicamentos.');
   const id = document.getElementById('med-id').value;
-  const values = { name: document.getElementById('med-name').value.trim(), lab: document.getElementById('med-lab').value.trim(), quantity: Number(document.getElementById('med-qty').value), unit: document.getElementById('med-unit').value, bought_at: document.getElementById('med-buy-date').value, expires_at: document.getElementById('med-exp-date').value };
+  const values = { name: document.getElementById('med-name').value.trim(), lab: document.getElementById('med-lab').value.trim(), quantity: Number(document.getElementById('med-qty').value), unit: document.getElementById('med-unit').value, bought_at: document.getElementById('med-buy-unknown').checked ? null : document.getElementById('med-buy-date').value, expires_at: document.getElementById('med-exp-date').value };
   if (!Number.isFinite(values.quantity) || values.quantity < 0) return showAlertModal('Quantidade inválida', 'Informe uma quantidade igual ou maior que zero.');
   try {
     if (id) {
@@ -558,7 +558,8 @@ function editMedication(id) {
   document.getElementById('med-lab').value = med.lab;
   document.getElementById('med-qty').value = med.qty;
   document.getElementById('med-unit').value = med.unit;
-  document.getElementById('med-buy-date').value = med.buyDate;
+  document.getElementById('med-buy-date').value = med.buyDate || '';
+  toggleBuyDateUnknown(!med.buyDate);
   document.getElementById('med-exp-date').value = med.expDate;
   document.getElementById('med-form-title').innerText = 'Editar Medicamento';
   document.getElementById('med-modal').style.display = 'flex';
@@ -566,9 +567,18 @@ function editMedication(id) {
 
 function resetMedForm() {
   document.getElementById('form-med').reset();
+  toggleBuyDateUnknown(false);
   document.getElementById('med-id').value = '';
   document.getElementById('med-form-title').innerText = 'Cadastrar Medicamento';
   document.getElementById('med-modal').style.display = 'none';
+}
+
+function toggleBuyDateUnknown(unknown) {
+  document.getElementById('med-buy-unknown').checked = unknown;
+  const input = document.getElementById('med-buy-date');
+  input.disabled = unknown;
+  input.required = !unknown;
+  if (unknown) input.value = '';
 }
 
 function openMedicationRestock(id) {
@@ -609,16 +619,16 @@ function getMedicationStockCategory(medication, today = toLocalDateString()) {
 }
 
 function getMedicationStockHistoryHtml(medication) {
-  const entries = [...medication.stockHistory].sort((left, right) => left.purchased_at.localeCompare(right.purchased_at));
+  const entries = [...medication.stockHistory].sort((left, right) => (left.purchased_at || '').localeCompare(right.purchased_at || ''));
   if (!entries.length) return '';
   const rows = entries.map((entry, index) => {
     const nextEntry = entries[index + 1];
-    const elapsedDays = Math.max(0, Math.round((Date.parse(`${nextEntry?.purchased_at || toLocalDateString()}T12:00:00`) - Date.parse(`${entry.purchased_at}T12:00:00`)) / 86400000));
-    const duration = nextEntry ? `Tempo até a próxima reposição: ${elapsedDays} dia(s)` : `Estoque registrado há ${elapsedDays} dia(s)`;
+    const elapsedDays = entry.purchased_at ? Math.max(0, Math.round((Date.parse(`${nextEntry?.purchased_at || toLocalDateString()}T12:00:00`) - Date.parse(`${entry.purchased_at}T12:00:00`)) / 86400000)) : null;
+    const duration = elapsedDays === null ? 'Data de compra indefinida' : nextEntry ? `Tempo até a próxima reposição: ${elapsedDays} dia(s)` : `Estoque registrado há ${elapsedDays} dia(s)`;
     const entryLabel = entry.type === 'restock' ? 'Reposição' : entry.type === 'adjustment' ? 'Ajuste' : 'Estoque inicial';
     const amount = Number(entry.quantity_added || 0);
     const signedAmount = entry.type === 'adjustment' && amount > 0 ? '+' : '';
-    return `<div class="stock-history-entry"><span>${entryLabel}: ${formatDate(entry.purchased_at)}</span><strong>${signedAmount}${amount} ${escapeHtml(medication.unit)}</strong><small>${duration}${entry.expires_at ? ` | Validade: ${formatDate(entry.expires_at)}` : ''}</small></div>`;
+    return `<div class="stock-history-entry"><span>${entryLabel}: ${entry.purchased_at ? formatDate(entry.purchased_at) : 'data indefinida'}</span><strong>${signedAmount}${amount} ${escapeHtml(medication.unit)}</strong><small>${duration}${entry.expires_at ? ` | Validade: ${formatDate(entry.expires_at)}` : ''}</small></div>`;
   }).join('');
   return `<details class="stock-history"><summary>Histórico de reposições</summary>${rows}</details>`;
 }
@@ -1043,10 +1053,10 @@ function renderDoseCard(dose, isViewer) {
   const treatment = db.treatments.find(item => item.id === dose.treatmentId);
   const administeredBy = db.users.find(user => user.id === dose.administeredById);
   const status = dose.status === 'done' ? '<span class="badge badge-success">Administrada</span>' : dose.status === 'late' ? '<span class="badge badge-danger">Atrasada</span>' : dose.status === 'skipped' ? '<span class="badge badge-warning">Não dada</span>' : '<span class="badge" style="background:var(--text-muted)">Pendente</span>';
-  const schedule = treatment?.scheduleMode === 'all_day' ? 'Dia inteiro' : `Prevista: ${dose.scheduledDateTime.substring(11, 16)}${treatment?.scheduleMode === 'window' ? ` (±${treatment.toleranceMinutes} min)` : ''}`;
+  const schedule = !dose.treatmentId ? 'Dose única' : treatment?.scheduleMode === 'all_day' ? 'Dia inteiro' : `Prevista: ${dose.scheduledDateTime.substring(11, 16)}${treatment?.scheduleMode === 'window' ? ` (±${treatment.toleranceMinutes} min)` : ''}`;
   const actual = dose.actualDateTime ? ` | Realizada: ${toLocalDateTimeString(new Date(dose.actualDateTime)).substring(11, 16)}` : '';
   const administeredByLabel = administeredBy ? `<p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Administrada por: <strong>${escapeHtml(administeredBy.name)}</strong></p>` : '';
-  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><strong>${schedule} - ${escapeHtml(pet?.name || 'Pet')}</strong>${status}</div><p style="font-size:0.9rem;margin-top:4px">Remédio: <strong>${escapeHtml(med?.name || 'Medicamento')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Dose: ${escapeHtml(treatment?.dosage || 'Não informada')}${actual}</p>${administeredByLabel}${renderDoseActions(dose, isViewer)}</div>`;
+  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><strong>${schedule} - ${escapeHtml(pet?.name || 'Pet')}</strong>${status}</div><p style="font-size:0.9rem;margin-top:4px">Remédio: <strong>${escapeHtml(med?.name || 'Medicamento')}</strong></p><p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px">Dose: ${escapeHtml(dose.treatmentId ? treatment?.dosage || 'Não informada' : 'Única')}${actual}</p>${administeredByLabel}${renderDoseActions(dose, isViewer)}</div>`;
 }
 
 async function markDose(doseId, action) {
@@ -1144,7 +1154,47 @@ async function undoDose(doseId) {
   } catch (error) { showError(error, 'Não foi possível desfazer o registro da dose'); }
 }
 
+function getSingleDoseMedications() {
+  const today = toLocalDateString();
+  return getFamilyMeds().filter(med => getMedicationStockCategory(med, today) === 'available' && !db.treatments.some(treatment => treatment.medId === med.id));
+}
+
+function openSingleDoseForm() {
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem registrar doses.');
+  const pets = getActiveFamilyPets();
+  const meds = getSingleDoseMedications();
+  if (!pets.length) return showAlertModal('Nenhum pet ativo', 'Cadastre um pet ativo para registrar uma dose.');
+  if (!meds.length) return showAlertModal('Nenhum medicamento disponível', 'Não há medicamentos disponíveis e fora de tratamentos para dose única.');
+  document.getElementById('single-dose-pet').innerHTML = pets.map(pet => `<option value="${pet.id}">${escapeHtml(pet.name)}</option>`).join('');
+  if (pets.some(pet => pet.id === activePetId)) document.getElementById('single-dose-pet').value = activePetId;
+  document.getElementById('single-dose-med').innerHTML = meds.map(med => `<option value="${med.id}">${escapeHtml(med.name)} (${escapeHtml(med.unit)})</option>`).join('');
+  document.getElementById('single-dose-actual-at').value = toLocalDateTimeString();
+  populateDoseMemberOptions('single-dose-administered-by');
+  document.getElementById('single-dose-modal').style.display = 'flex';
+}
+
+function closeSingleDoseForm() {
+  document.getElementById('single-dose-modal').style.display = 'none';
+}
+
+async function saveSingleDose(event) {
+  event.preventDefault();
+  if (getUserRole() === 'visualizador') return showAlertModal('Acesso restrito', 'Visualizadores não podem registrar doses.');
+  const petId = document.getElementById('single-dose-pet').value;
+  const medId = document.getElementById('single-dose-med').value;
+  const administeredAt = new Date(document.getElementById('single-dose-actual-at').value);
+  const administeredById = document.getElementById('single-dose-administered-by').value;
+  if (!petId || !medId || Number.isNaN(administeredAt.getTime())) return showAlertModal('Dados incompletos', 'Informe o pet, o medicamento e a data da administração.');
+  if (!administeredById) return showAlertModal('Responsável necessário', 'Selecione quem administrou o medicamento.');
+  try {
+    await request(supabaseClient.from('doses').insert({ family_id: currentFamily.id, treatment_id: null, pet_id: petId, medication_id: medId, scheduled_at: administeredAt.toISOString(), actual_at: administeredAt.toISOString(), administered_by: administeredById, status: 'done' }));
+    closeSingleDoseForm();
+    await refreshApp();
+  } catch (error) { showError(error, 'Não foi possível registrar a dose única'); }
+}
+
 function isTreatmentVisibleInDashboard(treatmentId) {
+  if (!treatmentId) return true;
   const treatment = db.treatments.find(item => item.id === treatmentId);
   return Boolean(treatment && !treatment.pausedAt && !isTreatmentFinished(treatment));
 }
