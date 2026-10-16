@@ -279,16 +279,21 @@
     .nav-icon img { width: 24px; height: 24px; object-fit: contain; display: block; transform: translateX(-24px); filter: drop-shadow(24px 0 0 currentColor); }
 
     .nav-btn.dash-btn {
-      background: var(--primary);
-      color: white;
+      background: var(--bg-nav);
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      box-sizing: border-box;
+      padding: 0;
+      flex: 0 0 50px;
       width: 50px;
       height: 50px;
       border-radius: 50%;
       margin-top: -20px;
       justify-content: center;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: background 0.2s, color 0.2s, transform 0.2s;
     }
-    .nav-btn.dash-btn.active { background: var(--primary-hover); color: white; }
+    .nav-btn.dash-btn.active { background: var(--primary); color: white; transform: scale(1.1); }
 
     /* BANNER & MODAL */
     .banner {
