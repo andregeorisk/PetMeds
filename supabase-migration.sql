@@ -15,6 +15,9 @@ alter table public.medications
 alter table public.medications
   add column if not exists package_quantity numeric;
 
+alter table public.medications
+  add column if not exists single_dose boolean not null default false;
+
 alter table public.treatments
   add column if not exists paused_at timestamptz,
   add column if not exists finished_at timestamptz,
