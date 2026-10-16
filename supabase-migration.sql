@@ -302,6 +302,31 @@ begin
 end;
 $$;
 
+-- Cada dose administrada desconta 1 unidade do estoque; desfazer ou alterar o status devolve.
+create or replace function public.sync_medication_stock_on_dose()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  was_done boolean := tg_op = 'UPDATE' and old.status = 'done';
+  is_done boolean := new.status = 'done';
+begin
+  if is_done and not was_done then
+    update public.medications set quantity = greatest(quantity - 1, 0) where id = new.medication_id;
+  elsif was_done and not is_done then
+    update public.medications set quantity = quantity + 1 where id = old.medication_id;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists doses_sync_stock on public.doses;
+create trigger doses_sync_stock
+after insert or update of status on public.doses
+for each row execute function public.sync_medication_stock_on_dose();
+
 grant execute on function public.join_family_by_code(text) to authenticated;
 grant execute on function public.invite_member_by_email(text, text) to authenticated;
 grant execute on function public.delete_pet(uuid) to authenticated;
