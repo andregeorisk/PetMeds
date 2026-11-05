@@ -54,7 +54,7 @@ const nodeLayer = document.getElementById('nodes');
 const svg = document.getElementById('connections');
 const viewport = document.getElementById('viewport');
 const zoomOutput = document.getElementById('zoom-level');
-const dimensions = { width: 212, height: 183, left: 44, top: 60, stepX: 255, stepY: 247 };
+const dimensions = { width: 212, height: 287, left: 44, top: 60, stepX: 255, stepY: 325 };
 const positions = new Map();
 let zoom = 1;
 let panX = 0;
@@ -99,7 +99,7 @@ function createNodes() {
     card.setAttribute('tabindex', '0');
     card.setAttribute('role', 'button');
     card.setAttribute('aria-label', `${node.title}, ${node.modal ? 'janela' : 'tela'}`);
-    card.innerHTML = `<div class="node-heading"><span class="node-index">${node.code}</span><strong>${node.title}</strong><span class="node-type">${node.modal ? 'JANELA' : 'TELA'}</span></div><div class="wireframe">${wireframe(node.kind)}</div><span class="node-caption">${node.caption}</span>`;
+    card.innerHTML = `<div class="node-heading"><span class="node-index">${node.code}</span><strong>${node.title}</strong><span class="node-type">${node.modal ? 'JANELA' : 'TELA'}</span></div><div class="device-shell"><div class="device-status"><span>9:41</span><i></i><b>● ▰</b></div><div class="wireframe">${wireframe(node.kind)}</div><div class="device-home"></div></div><span class="node-caption">${node.caption}</span>`;
     nodeLayer.append(card);
   });
 }
@@ -128,6 +128,7 @@ function anchorFor(from, to, route) {
 }
 
 function createConnections() {
+  svg.setAttribute('viewBox', '0 0 1800 1400');
   svg.innerHTML = '<defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1L7 4L1 7" fill="none" stroke="context-stroke" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>';
   links.forEach((link, index) => {
     const path = anchorFor(link.from, link.to, link.route);
@@ -149,9 +150,9 @@ function applyTransform() {
 function fitBoard() {
   const availableWidth = viewport.clientWidth - 50;
   const availableHeight = viewport.clientHeight - 38;
-  zoom = Math.min(availableWidth / 1900, availableHeight / 1090, 1.15);
-  panX = (viewport.clientWidth - 1900 * zoom) / 2;
-  panY = (viewport.clientHeight - 1090 * zoom) / 2;
+  zoom = Math.min(availableWidth / 1800, availableHeight / 1400, 1.15);
+  panX = (viewport.clientWidth - 1800 * zoom) / 2;
+  panY = (viewport.clientHeight - 1400 * zoom) / 2;
   applyTransform();
 }
 
