@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f3f0e7">
+  <title>PetMeds | Mapa de fluxo</title>
+  <link rel="stylesheet" href="fluxo-telas.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="fluxo-telas.html" aria-label="PetMeds, mapa de fluxo"><img src="logo_petmeds.svg" alt=""><span>PetMeds</span></a>
+    <div class="document-title"><span class="document-kicker">MAPA DE FLUXO</span><strong>Telas e janelas</strong></div>
+    <div class="toolbar">
+      <div class="view-filters" aria-label="Filtrar partes do fluxo">
+        <button class="filter-button active" data-filter="all">Tudo</button>
+        <button class="filter-button" data-filter="access">Acesso</button>
+        <button class="filter-button" data-filter="care">Cuidados</button>
+        <button class="filter-button" data-filter="team">Família</button>
+      </div>
+      <span class="toolbar-divider"></span>
+      <button class="tool-button" data-tool="zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">−</button>
+      <output id="zoom-level">100%</output>
+      <button class="tool-button" data-tool="zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">+</button>
+      <button class="tool-button fit-button" data-tool="fit" title="Enquadrar quadro">Enquadrar</button>
+    </div>
+  </header>
+  <main class="workspace">
+    <div class="board-meta"><span><i class="status-dot"></i>PetMeds · wireflow</span><span>21 telas e janelas <b>·</b> arraste para mover o quadro</span></div>
+    <div class="viewport" id="viewport" aria-label="Quadro do fluxo de telas PetMeds">
+      <div class="board" id="board">
+        <div class="lane-label lane-access">01 <span>Acesso e recuperação de conta</span><i></i></div>
+        <div class="lane-label lane-pages">02 <span>Áreas principais</span><i></i></div>
+        <div class="lane-label lane-windows">03 <span>Ações e janelas</span><i></i></div>
+        <svg class="connections" id="connections" aria-hidden="true"></svg>
+        <div id="nodes"></div>
+      </div>
+    </div>
+    <footer class="board-footer">
+      <div class="legend"><span><i class="legend-line"></i> Navegação</span><span><i class="legend-line action-line"></i> Ação ou abertura de janela</span><span><i class="legend-line system-line"></i> Aviso do sistema</span></div>
+      <div class="board-controls"><button data-tool="reset" title="Voltar ao enquadramento inicial">Recentrar</button><button data-tool="fullscreen" title="Alternar tela cheia">Tela cheia ⛶</button></div>
+    </footer>
+    <aside class="hint" id="hint"><span>✳</span> Clique numa tela para destacar as conexões. Arraste o quadro para explorar.</aside>
+  </main>
+  <script src="fluxo-telas.js" defer></script>
+</body>
+</html>
