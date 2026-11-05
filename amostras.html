@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f3f6f4">
+  <title>PetMeds | Amostras de telas</title>
+  <link rel="stylesheet" href="amostras.css">
+</head>
+<body>
+  <div class="demo-app">
+    <aside class="sidebar">
+      <a class="brand" href="amostras.html" aria-label="PetMeds, início">
+        <img src="logo_petmeds.svg" alt="">
+        <span>Pet<span>Meds</span></span>
+      </a>
+      <div class="demo-label">AMOSTRAS DE TELAS</div>
+      <nav class="side-nav" aria-label="Telas da demonstração">
+        <button class="nav-item active" data-screen="dashboard"><span class="nav-symbol">▦</span>Painel <span class="nav-count">01</span></button>
+        <button class="nav-item" data-screen="pets"><span class="nav-symbol">♧</span>Meus pets <span class="nav-count">02</span></button>
+        <button class="nav-item" data-screen="meds"><span class="nav-symbol">◉</span>Medicamentos <span class="nav-count">03</span></button>
+        <button class="nav-item" data-screen="treatments"><span class="nav-symbol">☷</span>Tratamentos <span class="nav-count">04</span></button>
+        <button class="nav-item" data-screen="family"><span class="nav-symbol">⌂</span>Família e ajustes <span class="nav-count">05</span></button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="demo-note"><span class="demo-dot"></span>Modo de demonstração</div>
+        <p>Dados fictícios. Nenhuma alteração é salva na sua conta.</p>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="breadcrumb"><span>PetMeds</span><span class="crumb-slash">/</span><strong id="current-section">Painel</strong></div>
+        <div class="topbar-actions">
+          <span class="family-pill"><span class="family-mark">G</span> Família Gamboa 106 <span class="chevron">⌄</span></span>
+          <button class="profile-button" type="button" aria-label="Perfil de André">AS</button>
+        </div>
+      </header>
+
+      <div class="content-wrap">
+        <section class="screen active" id="screen-dashboard" aria-labelledby="dashboard-title">
+          <div class="screen-heading">
+            <div><p class="eyebrow">QUARTA-FEIRA, 5 DE NOVEMBRO</p><h1 id="dashboard-title">Bom dia, André <span class="wave">↗</span></h1><p class="subheading">A rotina de hoje está organizada. Aqui está o resumo da família.</p></div>
+            <button type="button" class="button primary" data-action="open-dose">＋ Registrar dose única</button>
+          </div>
+          <div class="pet-switcher" aria-label="Filtrar por pet"><button class="pet-chip selected" data-pet="Todos"><span class="pet-chip-icon all-icon">✳</span>Todos</button><button class="pet-chip" data-pet="Ícaro"><span class="pet-chip-icon cat-icon">I</span>Ícaro</button><button class="pet-chip" data-pet="Laranja"><span class="pet-chip-icon orange-icon">L</span>Laranja</button></div>
+          <div class="stats-grid">
+            <article class="stat-box"><span class="stat-icon coral">♧</span><div><span class="stat-label">Pets acompanhados</span><strong>2 <small>ativos</small></strong></div><span class="stat-foot">na família</span></article>
+            <article class="stat-box"><span class="stat-icon mint">◷</span><div><span class="stat-label">Doses nesta semana</span><strong>18</strong></div><span class="stat-foot">de 21 programadas</span></article>
+            <article class="stat-box"><span class="stat-icon blue">✚</span><div><span class="stat-label">Medicamentos ativos</span><strong>5</strong></div><span class="stat-foot">1 precisa reposição</span></article>
+          </div>
+          <div class="dashboard-grid">
+            <section class="panel schedule-panel">
+              <div class="panel-heading"><div><p class="eyebrow">ROTINA</p><h2>Agenda de hoje</h2></div><button class="text-button" data-action="show-all-doses">Ver semana <span>→</span></button></div>
+              <div class="day-strip"><button class="day-cell muted"><span>SEG</span><b>03</b></button><button class="day-cell muted"><span>TER</span><b>04</b></button><button class="day-cell current"><span>QUA</span><b>05</b><i>Hoje</i></button><button class="day-cell"><span>QUI</span><b>06</b></button><button class="day-cell"><span>SEX</span><b>07</b></button><button class="day-cell"><span>SÁB</span><b>08</b></button><button class="day-cell"><span>DOM</span><b>09</b></button></div>
+              <div class="dose-list">
+                <article class="dose-row" data-pet-name="Ícaro"><span class="dose-time">08:00</span><span class="timeline-dot done-dot"></span><div class="dose-info"><strong>Dipirona</strong><span>Ícaro · 1 comprimido</span></div><span class="dose-state completed">Administrado</span><span class="dose-by">por André</span></article>
+                <article class="dose-row" data-pet-name="Laranja"><span class="dose-time">12:30</span><span class="timeline-dot next-dot"></span><div class="dose-info"><strong>Antibiótico</strong><span>Laranja · 2 ml</span></div><button class="button small confirm-dose" data-action="confirm-dose">Confirmar dose</button></article>
+                <article class="dose-row" data-pet-name="Ícaro"><span class="dose-time">20:00</span><span class="timeline-dot later-dot"></span><div class="dose-info"><strong>Probiótico</strong><span>Ícaro · 1 cápsula</span></div><span class="dose-state upcoming">Agendado</span></article>
+              </div>
+              <div class="schedule-foot"><span class="status-mark"></span>Uma dose aguardando confirmação</div>
+            </section>
+            <aside class="panel side-panel">
+              <div class="panel-heading"><div><p class="eyebrow">ACOMPANHAMENTO</p><h2>Seus pets</h2></div><button class="icon-button" data-goto="pets" aria-label="Ver pets">→</button></div>
+              <div class="mini-pet"><div class="pet-avatar avatar-icaro">Í</div><div class="mini-pet-info"><strong>Ícaro</strong><span>Gato · 6 anos</span><small><span class="weight-icon">↕</span> 6,1 kg <em>· registrado hoje</em></small></div><span class="health-indicator">●</span></div>
+              <div class="mini-pet"><div class="pet-avatar avatar-laranja">L</div><div class="mini-pet-info"><strong>Laranja</strong><span>Gato · 14 anos</span><small><span class="weight-icon">↕</span> 8,5 kg <em>· há 2 semanas</em></small></div><span class="health-indicator">●</span></div>
+              <div class="reminder-box"><span class="reminder-icon">!</span><p><strong>Estoque baixo</strong><br>Antibiótico tem doses para mais 2 dias.</p><button data-goto="meds">Conferir</button></div>
+            </aside>
+          </div>
+          <section class="panel history-panel"><div class="panel-heading"><div><p class="eyebrow">REGISTROS</p><h2>Administrações recentes</h2></div><div class="segmented"><button class="segment active" data-history="pessoa">Por pessoa</button><button class="segment" data-history="medicamento">Por medicamento</button></div></div><div class="history-table"><div class="history-head"><span>MEDICAMENTO</span><span>PET</span><span>ADMINISTRADO POR</span><span>DATA E HORA</span><span>STATUS</span></div><div class="history-line"><strong>Dipirona</strong><span>Ícaro</span><span>André Silva</span><span>Hoje, 08:04</span><span class="table-status">Concluído</span></div></div></section>
+        </section>
+
+        <section class="screen" id="screen-pets" aria-labelledby="pets-title">
+          <div class="screen-heading"><div><p class="eyebrow">PERFIL E SAÚDE</p><h1 id="pets-title">Meus pets</h1><p class="subheading">Informações, peso e tratamentos de cada companheiro.</p></div><button class="button primary" data-action="open-pet">＋ Cadastrar pet</button></div>
+          <div class="screen-toolbar"><div class="segmented pet-filter"><button class="segment active" data-pet-filter="active">Ativos <span>2</span></button><button class="segment" data-pet-filter="inactive">Não ativos <span>1</span></button></div><label class="search-field"><span>⌕</span><input type="search" placeholder="Buscar pet" aria-label="Buscar pet"></label></div>
+          <div class="pets-grid">
+            <article class="pet-profile"><div class="profile-top"><div class="pet-avatar large avatar-icaro">Í</div><div class="profile-name"><span class="active-tag"><i></i> Ativo</span><h2>Ícaro</h2><p>Gato · Nascido em 01/09/2019</p></div><button class="dots-button" aria-label="Mais opções">···</button></div><div class="weight-summary"><span class="weight-icon">↕</span><div><strong>6,1 <small>kg</small></strong><span>Peso mais recente · 05/11/2026</span></div><button class="text-button" data-action="weight-history">Histórico de peso →</button></div><div class="profile-treatments"><h3>Tratamentos ativos <span>2</span></h3><div class="tag-list"><span>Dipirona</span><span>Probiótico</span></div></div><div class="profile-actions"><button class="button outline" data-action="weight-history">↕ Histórico de peso</button><button class="button outline" data-action="edit-pet">Editar perfil</button></div></article>
+            <article class="pet-profile"><div class="profile-top"><div class="pet-avatar large avatar-laranja">L</div><div class="profile-name"><span class="active-tag"><i></i> Ativo</span><h2>Laranja</h2><p>Gato · Nascido em 01/06/2012</p></div><button class="dots-button" aria-label="Mais opções">···</button></div><div class="weight-summary"><span class="weight-icon">↕</span><div><strong>8,5 <small>kg</small></strong><span>Peso mais recente · 22/10/2026</span></div><button class="text-button" data-action="weight-history">Histórico de peso →</button></div><div class="profile-treatments"><h3>Tratamentos ativos <span>1</span></h3><div class="tag-list"><span>Antibiótico</span></div></div><div class="profile-actions"><button class="button outline" data-action="weight-history">↕ Histórico de peso</button><button class="button outline" data-action="edit-pet">Editar perfil</button></div></article>
+            <article class="pet-profile inactive-pet" hidden><div class="profile-top"><div class="pet-avatar large avatar-thor">T</div><div class="profile-name"><span class="inactive-tag">Inativo</span><h2>Thor</h2><p>Cão · Perfil arquivado</p></div><button class="dots-button" aria-label="Mais opções">···</button></div><p class="archived-note">O histórico permanece guardado para consulta.</p><div class="profile-actions"><button class="button outline" data-action="pet-record">Ver histórico</button></div></article>
+          </div>
+          <div class="feature-caption"><span>02</span><p><strong>Perfil completo por pet</strong> · acompanhe peso, tratamentos e histórico de saúde em um só lugar.</p></div>
+        </section>
+
+        <section class="screen" id="screen-meds" aria-labelledby="meds-title">
+          <div class="screen-heading"><div><p class="eyebrow">INVENTÁRIO DA FAMÍLIA</p><h1 id="meds-title">Medicamentos</h1><p class="subheading">Validade e quantidade em estoque, sempre à mão.</p></div><button class="button primary" data-action="open-med">＋ Cadastrar medicamento</button></div>
+          <div class="stock-summary"><div><span class="stock-kicker">NO SEU ESTOQUE</span><strong>5 <small>medicamentos</small></strong></div><div class="stock-breakdown"><span><i class="stock-dot good"></i> 3 disponíveis</span><span><i class="stock-dot low"></i> 1 estoque baixo</span><span><i class="stock-dot expired"></i> 1 vencido</span></div></div>
+          <div class="screen-toolbar"><div class="segmented med-filter"><button class="segment active" data-med-filter="available">Disponíveis <span>3</span></button><button class="segment" data-med-filter="low">Estoque baixo <span>1</span></button><button class="segment" data-med-filter="expired">Vencidos <span>1</span></button></div><label class="search-field"><span>⌕</span><input type="search" placeholder="Buscar medicamento" aria-label="Buscar medicamento"></label></div>
+          <div class="med-table panel"><div class="med-table-head"><span>MEDICAMENTO</span><span>ESTOQUE</span><span>VALIDADE</span><span>TRATAMENTO</span><span>AÇÃO</span></div>
+            <article class="med-row" data-med-status="available"><div class="med-title"><span class="med-icon mint">✚</span><span><strong>Dipirona</strong><small>Gotas · 20 ml</small></span></div><div><strong>16 ml</strong><small class="stock-caption">Disponível</small></div><div><strong>20/03/2027</strong><small>Em 135 dias</small></div><div><span class="linked-pet"><span class="tiny-avatar avatar-icaro">Í</span> Ícaro</span></div><button class="button outline small" data-action="restock">＋ Repor</button></article>
+            <article class="med-row" data-med-status="low"><div class="med-title"><span class="med-icon amber">✚</span><span><strong>Antibiótico</strong><small>Suspensão · 10 ml</small></span></div><div><strong>2 ml</strong><small class="stock-caption low-text">Baixo · ~2 dias</small></div><div><strong>12/11/2026</strong><small>Em 7 dias</small></div><div><span class="linked-pet"><span class="tiny-avatar avatar-laranja">L</span> Laranja</span></div><button class="button outline small" data-action="restock">＋ Repor</button></article>
+            <article class="med-row" data-med-status="available"><div class="med-title"><span class="med-icon blue">✚</span><span><strong>Probiótico</strong><small>Cápsulas · 30 un.</small></span></div><div><strong>24 un.</strong><small class="stock-caption">Disponível</small></div><div><strong>08/06/2027</strong><small>Em 215 dias</small></div><div><span class="linked-pet"><span class="tiny-avatar avatar-icaro">Í</span> Ícaro</span></div><button class="button outline small" data-action="restock">＋ Repor</button></article>
+            <article class="med-row" data-med-status="expired" hidden><div class="med-title"><span class="med-icon gray">✚</span><span><strong>Pomada dermatológica</strong><small>Uso tópico · 15 g</small></span></div><div><strong>1 un.</strong><small class="stock-caption">Em estoque</small></div><div><strong>10/10/2026</strong><small class="low-text">Vencido</small></div><div><span>Sem tratamento</span></div><button class="button outline small" data-action="med-details">Detalhes</button></article>
+          </div>
+          <div class="feature-caption"><span>03</span><p><strong>Estoque e validade</strong> · receba sinais visuais de reposição e acompanhe os medicamentos vinculados aos tratamentos.</p></div>
+        </section>
+
+        <section class="screen" id="screen-treatments" aria-labelledby="treatments-title">
+          <div class="screen-heading"><div><p class="eyebrow">DOSES E HORÁRIOS</p><h1 id="treatments-title">Tratamentos</h1><p class="subheading">Monte uma rotina e registre cada administração.</p></div><button class="button primary" data-action="open-treatment">＋ Novo tratamento</button></div>
+          <div class="treatment-overview"><div class="overview-mark">◷</div><div><strong>Rotina em andamento</strong><span>3 tratamentos ativos · próximas doses às 12:30 e 20:00</span></div><button class="text-button" data-goto="dashboard">Ver agenda →</button></div>
+          <div class="screen-toolbar"><div class="segmented treatment-filter"><button class="segment active" data-treatment-filter="active">Ativos <span>3</span></button><button class="segment" data-treatment-filter="paused">Pausados <span>1</span></button><button class="segment" data-treatment-filter="completed">Concluídos <span>4</span></button></div><span class="filter-hint">Filtrar por status</span></div>
+          <div class="treatment-list">
+            <article class="treatment-card panel" data-treatment-status="active"><div class="treatment-main"><span class="treatment-icon pink">✚</span><div><div class="treatment-name"><h2>Antibiótico</h2><span class="treatment-status active-status">Ativo</span></div><p><span class="tiny-avatar avatar-laranja">L</span> Laranja <span class="dot-separator">·</span> 2 ml <span class="dot-separator">·</span> a cada 12 horas</p></div></div><div class="treatment-schedule"><span class="eyebrow">PRÓXIMA DOSE</span><strong>Hoje, 12:30</strong><span>Faltam 2 horas</span></div><div class="treatment-actions"><button class="button primary small" data-action="confirm-dose">Registrar dose</button><button class="button outline small" data-action="pause-treatment">Pausar</button></div></article>
+            <article class="treatment-card panel" data-treatment-status="active"><div class="treatment-main"><span class="treatment-icon mint">✚</span><div><div class="treatment-name"><h2>Dipirona</h2><span class="treatment-status active-status">Ativo</span></div><p><span class="tiny-avatar avatar-icaro">Í</span> Ícaro <span class="dot-separator">·</span> 1 comprimido <span class="dot-separator">·</span> a cada 8 horas</p></div></div><div class="treatment-schedule"><span class="eyebrow">PRÓXIMA DOSE</span><strong>Hoje, 16:00</strong><span>Horários flexíveis</span></div><div class="treatment-actions"><button class="button primary small" data-action="confirm-dose">Registrar dose</button><button class="button outline small" data-action="pause-treatment">Pausar</button></div></article>
+            <article class="treatment-card panel" data-treatment-status="paused" hidden><div class="treatment-main"><span class="treatment-icon gray">✚</span><div><div class="treatment-name"><h2>Suplemento vitamínico</h2><span class="treatment-status paused-status">Pausado</span></div><p><span class="tiny-avatar avatar-icaro">Í</span> Ícaro <span class="dot-separator">·</span> 1 cápsula <span class="dot-separator">·</span> 1 vez ao dia</p></div></div><div class="treatment-schedule"><span class="eyebrow">PAUSADO EM</span><strong>01/11/2026</strong><span>Histórico preservado</span></div><div class="treatment-actions"><button class="button outline small" data-action="resume-treatment">Retomar</button><button class="button outline small" data-action="treatment-history">Histórico</button></div></article>
+          </div>
+          <div class="feature-caption"><span>04</span><p><strong>Tratamentos flexíveis</strong> · defina horários, frequência e duração; pause e retome mantendo o histórico.</p></div>
+        </section>
+
+        <section class="screen" id="screen-family" aria-labelledby="family-title">
+          <div class="screen-heading"><div><p class="eyebrow">GESTÃO COMPARTILHADA</p><h1 id="family-title">Família e ajustes</h1><p class="subheading">Cuide dos pets em conjunto, com permissões para cada pessoa.</p></div><button class="button outline" data-action="copy-code">▣ Copiar código do grupo</button></div>
+          <div class="family-layout">
+            <section class="panel family-card"><div class="panel-heading"><div><p class="eyebrow">SEU GRUPO</p><h2>Família Gamboa 106</h2></div><span class="family-icon">⌂</span></div><p class="family-description">Compartilhe os cuidados e mantenha todos a par dos horários e registros.</p><div class="invite-code"><div><span class="eyebrow">CÓDIGO DE CONVITE</span><strong>G6M2K9</strong></div><button class="button outline small" data-action="copy-code">Copiar</button></div><div class="member-list"><div class="member-row"><span class="member-avatar member-andre">AS</span><div><strong>André Silva <small>Você</small></strong><span>andre@email.com</span></div><span class="role-badge admin-role">Administrador</span></div><div class="member-row"><span class="member-avatar member-maria">MC</span><div><strong>Maria Costa</strong><span>Cuida dos pets desde 2024</span></div><span class="role-badge caregiver-role">Cuidadora</span></div><div class="member-row"><span class="member-avatar member-joao">JP</span><div><strong>João Pereira</strong><span>Acesso temporário · até 12/11</span></div><span class="role-badge guest-role">Temporário</span></div></div><button class="button outline invite-button" data-action="invite-member">＋ Convidar pessoa</button></section>
+            <div class="settings-column"><section class="panel settings-panel"><p class="eyebrow">SUA CONTA</p><h2>Perfil</h2><div class="account-row"><span class="member-avatar member-andre">AS</span><div><strong>André Silva</strong><span>andre@email.com</span></div><button class="text-button" data-action="edit-profile">Editar →</button></div></section><section class="panel settings-panel"><p class="eyebrow">PREFERÊNCIAS</p><h2>Lembretes e aparência</h2><label class="toggle-row"><span><strong>Lembretes por e-mail</strong><small>Receber avisos de doses agendadas</small></span><input type="checkbox" checked><i class="toggle"></i></label><label class="toggle-row"><span><strong>Tema escuro</strong><small>Alternar aparência da interface</small></span><input type="checkbox" id="dark-toggle"><i class="toggle"></i></label><button class="settings-link" data-action="export-data"><span>⇩</span><span><strong>Exportar dados</strong><small>Baixar uma cópia dos registros</small></span><b>→</b></button></section><section class="help-card"><span>?</span><div><strong>Seu espaço de cuidado</strong><p>Os dados da família ficam disponíveis para todos os membros autorizados.</p></div></section></div>
+          </div>
+          <div class="feature-caption"><span>05</span><p><strong>Cuidado compartilhado</strong> · convide familiares, controle permissões e personalize lembretes.</p></div>
+        </section>
+        <footer class="page-footer"><span>PetMeds · Amostras de telas</span><div><button data-action="previous-screen">← Anterior</button><span id="screen-counter">01 / 05</span><button data-action="next-screen">Próxima →</button></div></footer>
+      </div>
+    </main>
+  </div>
+  <dialog id="demo-dialog" class="demo-dialog"><button class="dialog-close" data-action="close-dialog" aria-label="Fechar">×</button><div id="dialog-content"></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="amostras.js" defer></script>
+</body>
+</html>
